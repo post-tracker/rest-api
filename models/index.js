@@ -120,6 +120,9 @@ models.Post = sequelize.define(
         },
         url: {
             type: Sequelize.TEXT,
+        },
+        urlHash: {
+            type: Sequelize.STRING,
             unique: true,
         },
     },
