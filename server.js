@@ -104,6 +104,10 @@ server.use( ( request, response, next ) => {
     next();
 } );
 
+server.get( '/', ( request, response ) => {
+    response.send( 'Hello' );
+} );
+
 server.get( '/:game/posts', ( request, response ) => {
     const query = Object.assign( {}, defaultQuery );
 
