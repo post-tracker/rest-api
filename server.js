@@ -17,7 +17,7 @@ const server = restify.createServer( {
     name: 'Post tracker REST API',
 } );
 
-passport.use(new Strategy(
+passport.use( new Strategy(
     {
         passReqToCallback: true,
     },
@@ -31,8 +31,15 @@ passport.use(new Strategy(
                 return authenticationCallback( null, false );
             }
 
-            if ( !tokenData[ token ].paths.includes( request.route.path ) ) {
+            if ( !tokenData[ token ].paths[ request.route.path ] ) {
                 console.log( `${ token } not authenticated for ${ request.route.path }` );
+
+                return authenticationCallback( null, false );
+            }
+
+            if ( !tokenData[ token ].paths[ request.route.path ].includes( request.method ) ) {
+                console.log( `${ token } not authenticated for ${ request.method } on ${ request.route.path }` );
+
                 return authenticationCallback( null, false );
             }
 
