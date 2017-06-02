@@ -29,6 +29,10 @@ models.Game = sequelize.define(
         shortName: {
             type: Sequelize.STRING,
         },
+    },
+    {
+        charset: 'utf8mb4',
+        collate: 'utf8mb4_general_ci',
     }
 );
 
@@ -59,6 +63,10 @@ models.Developer = sequelize.define(
         role: {
             type: Sequelize.STRING,
         },
+    },
+    {
+        charset: 'utf8mb4',
+        collate: 'utf8mb4_general_ci',
     }
 );
 
@@ -80,6 +88,10 @@ models.Account = sequelize.define(
             type: Sequelize.STRING,
             unique: 'compsiteIndex',
         },
+    },
+    {
+        charset: 'utf8mb4',
+        collate: 'utf8mb4_general_ci',
     }
 );
 
