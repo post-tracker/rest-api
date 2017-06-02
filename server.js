@@ -22,7 +22,6 @@ passport.use(new Strategy(
         passReqToCallback: true,
     },
     ( request, token, authenticationCallback ) => {
-        console.log( request.route.path );
         jsonfile.readFile( path.join( __dirname, 'config/tokens.json' ), ( readError, tokenData ) => {
             if ( readError ) {
                 return authenticationCallback( readError );
