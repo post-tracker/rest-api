@@ -101,13 +101,13 @@ models.Post = sequelize.define(
             type: Sequelize.INTEGER,
         },
         topic: {
-            type: Sequelize.STRING,
+            type: Sequelize.TEXT,
         },
         topicUrl: {
-            type: Sequelize.STRING,
+            type: Sequelize.TEXT,
         },
         url: {
-            type: Sequelize.STRING,
+            type: Sequelize.TEXT,
             unique: true,
         },
     },
