@@ -1,0 +1,13 @@
+{
+    "apps": [
+        {
+            "name": "rest-api",
+            "script": "server.js",
+            "node-args": "--max-old-space-size=256",
+            "env": {
+                "NODE_ENV": "production"
+            },
+            "watch": true
+        }
+    ]
+}
