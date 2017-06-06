@@ -56,9 +56,7 @@ models.Developer = sequelize.define(
             type: Sequelize.STRING,
         },
         nick: {
-            allowNull: false,
             type: Sequelize.STRING,
-            unique: 'compsiteIndex',
         },
         role: {
             type: Sequelize.STRING,
