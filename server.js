@@ -220,32 +220,39 @@ server.get(
         session: false,
     } ),
     ( request, response ) => {
-        models.Account.findAll(
-            {
-                attributes: [
-                    'identifier',
-                    'service',
-                ],
-                include: [
-                    {
-                        attributes: [],
-                        include: [
-                            {
-                                attributes: [],
-                                model: models.Game,
-                                where: {
-                                    identifier: request.params.game,
-                                },
+        const query = {
+            attributes: [
+                'id',
+                'identifier',
+                'service',
+            ],
+            include: [
+                {
+                    attributes: [],
+                    include: [
+                        {
+                            attributes: [],
+                            model: models.Game,
+                            where: {
+                                identifier: request.params.game,
                             },
-                        ],
-                        model: models.Developer,
-                        where: {},
-                    },
-                ],
-                model: models.Account,
-                where: {},
-            }
-        )
+                        },
+                    ],
+                    model: models.Developer,
+                    where: {},
+                },
+            ],
+            model: models.Account,
+            where: {},
+        };
+
+        if ( request.params.active && request.params.active.length > 0 ) {
+            const active = Number( request.params.active );
+
+            query.include[ 0 ].where.active = active;
+        }
+
+        models.Account.findAll( query )
             .then( ( accounts ) => {
                 response.send( accounts );
             } )
