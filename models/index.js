@@ -106,6 +106,9 @@ models.Post = sequelize.define(
             primaryKey: true,
             type: Sequelize.INTEGER,
         },
+        section: {
+            type: Sequelize.STRING,
+        },
         timestamp: {
             allowNull: false,
             type: Sequelize.INTEGER,
