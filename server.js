@@ -20,7 +20,7 @@ const server = restify.createServer( {
     // eslint-disable-next-line no-sync
     certificate: fs.readFileSync( '/etc/letsencrypt/live/api.kokarn.com/cert.pem' ),
     // eslint-disable-next-line no-sync
-    key: fs.readFileSync( '/etc/letsencrypt/live/api.kokarn.com/key.pem' ),
+    key: fs.readFileSync( '/etc/letsencrypt/live/api.kokarn.com/privkey.pem' ),
     name: 'Post tracker REST API',
 } );
 
