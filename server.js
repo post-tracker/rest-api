@@ -1,19 +1,26 @@
 const path = require( 'path' );
+const fs = require( 'fs' );
 
+const sha1 = require( 'sha1' );
 const restify = require( 'restify' );
-const jsonfile = require( 'jsonfile' )
+const jsonfile = require( 'jsonfile' );
 const passport = require( 'passport' );
+const alphanumSort = require( 'alphanum-sort' );
 const Strategy = require( 'passport-http-bearer' ).Strategy;
 
 const models = require( './models' );
 
 const LISTEN_PORT = 3000;
 
+const JSON_INDENTATION = 4;
+
+const MALFORMED_REQUEST_STATUS_CODE = 400;
+
 const server = restify.createServer( {
     // eslint-disable-next-line no-sync
-    // certificate: fs.readFileSync( 'cert.pem' ),
+    certificate: fs.readFileSync( 'cert.pem' ),
     // eslint-disable-next-line no-sync
-    // key: fs.readFileSync( 'key.pem' ),
+    key: fs.readFileSync( 'key.pem' ),
     name: 'Post tracker REST API',
 } );
 
@@ -48,56 +55,11 @@ passport.use( new Strategy(
     }
 ) );
 
-const defaultQuery = {
-    attributes: [
-        'content',
-        'id',
-        'timestamp',
-        'topic',
-        'topicUrl',
-        'url',
-    ],
-    include: [
-        {
-            attributes: [
-                'identifier',
-                'service',
-            ],
-            include: [
-                {
-                    attributes: [
-                        'group',
-                        'name',
-                        'nick',
-                        'role',
-                    ],
-                    include: [
-                        {
-                            attributes: [],
-                            model: models.Game,
-                            where: {},
-                        },
-                    ],
-                    model: models.Developer,
-                    where: {},
-                },
-            ],
-            model: models.Account,
-            where: {},
-        },
-    ],
-    limit: 50,
-    order: [
-        [
-            'timestamp',
-            'DESC',
-        ],
-    ],
-    where: {},
-};
-
+server.use( restify.bodyParser() );
 server.use( restify.queryParser() );
 server.use( restify.gzipResponse() );
+// eslint-disable-next-line new-cap
+server.use( restify.CORS() );
 
 // Implement restify redirect so we can use passport
 // https://coderwall.com/p/arjzog/make-passport-work-with-restify-by-fixing-redirect-functionality-with-this-snippet
@@ -115,7 +77,55 @@ server.get( '/', ( request, response ) => {
 } );
 
 server.get( '/:game/posts', ( request, response ) => {
-    const query = Object.assign( {}, defaultQuery );
+    const query = {
+        attributes: [
+            'content',
+            'id',
+            'section',
+            'timestamp',
+            'topic',
+            'topicUrl',
+            'url',
+            'urlHash',
+        ],
+        include: [
+            {
+                attributes: [
+                    'identifier',
+                    'service',
+                ],
+                include: [
+                    {
+                        attributes: [
+                            'group',
+                            'name',
+                            'nick',
+                            'role',
+                        ],
+                        include: [
+                            {
+                                attributes: [],
+                                model: models.Game,
+                                where: {},
+                            },
+                        ],
+                        model: models.Developer,
+                        where: {},
+                    },
+                ],
+                model: models.Account,
+                where: {},
+            },
+        ],
+        limit: 50,
+        order: [
+            [
+                'timestamp',
+                'DESC',
+            ],
+        ],
+        where: {},
+    };
 
     query.include[ 0 ].include[ 0 ].include[ 0 ].where = {
         identifier: request.params.game,
@@ -139,7 +149,7 @@ server.get( '/:game/posts', ( request, response ) => {
             query.include[ 0 ].where,
             {
                 service: {
-                    $in: request.query.services.split( ',' ),
+                    $in: request.query.services,
                 },
             }
         );
@@ -151,8 +161,26 @@ server.get( '/:game/posts', ( request, response ) => {
             query.include[ 0 ].include[ 0 ].where,
             {
                 group: {
-                    $in: request.query.groups.split( ',' ),
+                    $in: request.query.groups,
                 },
+            }
+        );
+    }
+
+    if ( request.query.excludeService ) {
+        let serviceWhere = {};
+
+        if ( query.include[ 0 ].where.service ) {
+            serviceWhere = query.include[ 0 ].where.service;
+        }
+
+        serviceWhere.$notIn = [ request.query.excludeService ];
+
+        query.include[ 0 ].where = Object.assign(
+            {},
+            query.include[ 0 ].where,
+            {
+                service: serviceWhere,
             }
         );
     }
@@ -167,7 +195,53 @@ server.get( '/:game/posts', ( request, response ) => {
 } );
 
 server.get( '/:game/posts/:id', ( request, response ) => {
-    const query = Object.assign( {}, defaultQuery );
+    const query = {
+        attributes: [
+            'content',
+            'id',
+            'timestamp',
+            'topic',
+            'topicUrl',
+            'url',
+        ],
+        include: [
+            {
+                attributes: [
+                    'identifier',
+                    'service',
+                ],
+                include: [
+                    {
+                        attributes: [
+                            'group',
+                            'name',
+                            'nick',
+                            'role',
+                        ],
+                        include: [
+                            {
+                                attributes: [],
+                                model: models.Game,
+                                where: {},
+                            },
+                        ],
+                        model: models.Developer,
+                        where: {},
+                    },
+                ],
+                model: models.Account,
+                where: {},
+            },
+        ],
+        limit: 50,
+        order: [
+            [
+                'timestamp',
+                'DESC',
+            ],
+        ],
+        where: {},
+    };
 
     query.include[ 0 ].include[ 0 ].include[ 0 ].where = {
         identifier: request.params.game,
@@ -262,43 +336,186 @@ server.get(
     }
 );
 
+server.get(
+    '/:game/hashes',
+    passport.authenticate( 'bearer', {
+        session: false,
+    } ),
+    ( request, response ) => {
+        const query = {
+            attributes: [
+                'urlHash',
+            ],
+            include: [
+                {
+                    attributes: [],
+                    include: [
+                        {
+                            attributes: [],
+                            include: [
+                                {
+                                    attributes: [],
+                                    model: models.Game,
+                                    where: {
+                                        identifier: request.params.game,
+                                    },
+                                },
+                            ],
+                            model: models.Developer,
+                            where: {},
+                        },
+                    ],
+                    model: models.Account,
+                    where: {},
+                },
+            ],
+            where: {},
+        };
+
+        models.Post.findAll( query )
+            .then( ( posts ) => {
+                const urls = [];
+
+                posts.forEach( ( post ) => {
+                    urls.push( post.urlHash );
+                } );
+
+                response.send( urls );
+            } )
+            .catch( ( queryError ) => {
+                console.log( queryError );
+            } );
+    }
+);
+
+server.get(
+    '/:game/services',
+    ( request, response ) => {
+        const query = {
+            attributes: [
+                'service',
+            ],
+            include: [
+                {
+                    attributes: [],
+                    include: [
+                        {
+                            attributes: [],
+                            model: models.Game,
+                            where: {
+                                identifier: request.params.game,
+                            },
+                        },
+                    ],
+                    model: models.Developer,
+                    where: {},
+                },
+            ],
+            model: models.Account,
+            where: {},
+        };
+
+        models.Account.findAll( query )
+            .then( ( serviceObjects ) => {
+                const services = [];
+
+                serviceObjects.forEach( ( currentObject ) => {
+                    services.push( currentObject.service );
+                } );
+
+                response.send( alphanumSort(
+                    [ ...new Set( services ) ],
+                    {
+                        insensitive: true,
+                    }
+                ) );
+            } )
+            .catch( ( queryError ) => {
+                console.log( queryError );
+            } );
+    }
+);
+
+server.get(
+    '/:game/groups',
+    ( request, response ) => {
+        const query = {
+            attributes: [
+                'group',
+            ],
+            include: [
+                {
+                    attributes: [],
+                    model: models.Game,
+                    where: {
+                        identifier: request.params.game,
+                    },
+                },
+            ],
+            model: models.Developer,
+            where: {
+                group: {
+                    $ne: null,
+                },
+            },
+        };
+
+        models.Developer.findAll( query )
+            .then( ( groupObjects ) => {
+                const groups = [];
+
+                groupObjects.forEach( ( currentObject ) => {
+                    groups.push( currentObject.group );
+                } );
+
+                response.send( alphanumSort(
+                    [ ...new Set( groups ) ],
+                    {
+                        insensitive: true,
+                    }
+                ) );
+            } )
+            .catch( ( queryError ) => {
+                console.log( queryError );
+            } );
+    }
+);
+
 server.post(
     '/:game/posts',
     passport.authenticate( 'bearer', {
         session: false,
     } ),
     ( request, response ) => {
-        response.send( 'OK' );
-    }
-);
-
-server.post(
-    '/:game/accounts',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
-    ( request, response ) => {
-        response.send( 'OK' );
-    }
-);
-
-server.post(
-    '/:game/developers',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
-    ( request, response ) => {
-        response.send( 'OK' );
-    }
-);
-
-server.post(
-    '/:game/games',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
-    ( request, response ) => {
-        response.send( 'OK' );
+        models.Post.findOrCreate(
+            {
+                defaults: {
+                    accountId: request.body.id,
+                    content: request.body.content,
+                    section: request.body.section,
+                    timestamp: request.body.timestamp,
+                    topic: request.body.topic,
+                    topicUrl: request.body.topicUrl,
+                    url: request.body.url,
+                    urlHash: sha1( request.body.url ),
+                },
+                where: {
+                    urlHash: sha1( request.body.url ),
+                },
+            }
+        )
+        .then( () => {
+            console.log( 'Post added' );
+            response.send( 'OK' );
+        } )
+        .catch( ( postCreateError ) => {
+            response.send( MALFORMED_REQUEST_STATUS_CODE );
+            if ( postCreateError.fields ) {
+                console.log( `${ postCreateError.name }\n${ JSON.stringify( postCreateError.fields, null, JSON_INDENTATION ) }` );
+            } else {
+                console.log( postCreateError );
+            }
+        } );
     }
 );
 
