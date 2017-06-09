@@ -18,7 +18,7 @@ const MALFORMED_REQUEST_STATUS_CODE = 400;
 
 const server = restify.createServer( {
     // eslint-disable-next-line no-sync
-    certificate: fs.readFileSync( path.join( __dirname, './assets/cert.pem' ) ),
+    certificate: fs.readFileSync( path.join( __dirname, './assets/fullchain.pem' ) ),
     // eslint-disable-next-line no-sync
     key: fs.readFileSync( path.join( __dirname, './assets/privkey.pem' ) ),
     name: 'Post tracker REST API',

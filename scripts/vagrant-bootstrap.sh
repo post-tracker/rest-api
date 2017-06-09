@@ -11,6 +11,7 @@ sudo debconf-set-selections <<< 'mysql-server mysql-server/root_password_again p
 
 apt-get install -y nodejs mysql-server
 
-# iptables -t nat -I PREROUTING -p tcp --dport 80 -j REDIRECT --to-ports 3000
+# iptables -t nat -I PREROUTING -p tcp --dport 443 -j REDIRECT --to-ports 3000
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=localhost" -keyout /vagrant/rest-api/assets/privkey.pem -out /vagrant/rest-api/assets/fullchain.pem
 
 systemctl status mysql.service
