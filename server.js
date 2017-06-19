@@ -15,6 +15,7 @@ const LISTEN_PORT = 3000;
 const JSON_INDENTATION = 4;
 
 const MALFORMED_REQUEST_STATUS_CODE = 400;
+const CORS_OPTIONS_STATUS_CODE = 204;
 
 const server = restify.createServer( {
     // eslint-disable-next-line no-sync
@@ -59,7 +60,28 @@ server.use( restify.bodyParser() );
 server.use( restify.queryParser() );
 server.use( restify.gzipResponse() );
 // eslint-disable-next-line new-cap
-server.use( restify.CORS() );
+server.use( restify.CORS(
+    {
+        headers: [
+            'accept',
+            'authorization',
+            'cache-control',
+            'connection',
+            'content-type',
+            'dnt',
+            'host',
+            'if-modified-since',
+            'keep-alive',
+            'upgrade',
+            'user-agent',
+            'withcredentials',
+            'x-customheader',
+            'x-forwarded-for',
+            'x-real-ip',
+            'x-requested-with',
+        ]
+    }
+) );
 
 // Implement restify redirect so we can use passport
 // https://coderwall.com/p/arjzog/make-passport-work-with-restify-by-fixing-redirect-functionality-with-this-snippet
@@ -70,6 +92,11 @@ server.use( ( request, response, next ) => {
     };
 
     next();
+} );
+
+// Enable OPTIONS for CORS
+server.opts( /.*/, ( req, res ) => {
+    res.send( CORS_OPTIONS_STATUS_CODE )
 } );
 
 server.get( '/', ( request, response ) => {
