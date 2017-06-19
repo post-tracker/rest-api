@@ -15,6 +15,7 @@ const LISTEN_PORT = 3000;
 const JSON_INDENTATION = 4;
 
 const MALFORMED_REQUEST_STATUS_CODE = 400;
+const PASSPORT_REDIRECT_STATUS_CODE = 302;
 const CORS_OPTIONS_STATUS_CODE = 204;
 
 const server = restify.createServer( {
@@ -90,7 +91,7 @@ restify.CORS.ALLOW_HEADERS.push( 'authorization' );
 server.use( ( request, response, next ) => {
     response.redirect = ( address ) => {
         response.header( 'Location', address );
-        response.send( 302 );
+        response.send( PASSPORT_REDIRECT_STATUS_CODE );
     };
 
     next();
