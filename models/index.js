@@ -133,12 +133,42 @@ models.Post = sequelize.define(
     }
 );
 
-models.Game.hasMany( models.Developer );
-models.Developer.hasMany( models.Account );
-models.Account.hasMany( models.Post );
-models.Post.belongsTo( models.Account );
-models.Account.belongsTo( models.Developer );
-models.Developer.belongsTo( models.Game );
+models.Game.hasMany( models.Developer, {
+    foreignKey: {
+        allowNull: false,
+    },
+    onDelete: 'CASCADE',
+} );
+models.Developer.hasMany( models.Account, {
+    foreignKey: {
+        allowNull: false,
+    },
+    onDelete: 'CASCADE',
+} );
+models.Account.hasMany( models.Post, {
+    foreignKey: {
+        allowNull: false,
+    },
+    onDelete: 'CASCADE',
+} );
+models.Post.belongsTo( models.Account, {
+    foreignKey: {
+        allowNull: false,
+    },
+    onDelete: 'CASCADE',
+} );
+models.Account.belongsTo( models.Developer, {
+    foreignKey: {
+        allowNull: false,
+    },
+    onDelete: 'CASCADE',
+} );
+models.Developer.belongsTo( models.Game, {
+    foreignKey: {
+        allowNull: false,
+    },
+    onDelete: 'CASCADE',
+} );
 
 models.sequelize = sequelize;
 
