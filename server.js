@@ -83,6 +83,8 @@ server.use( restify.CORS(
     }
 ) );
 
+restify.CORS.ALLOW_HEADERS.push( 'authorization' );
+
 // Implement restify redirect so we can use passport
 // https://coderwall.com/p/arjzog/make-passport-work-with-restify-by-fixing-redirect-functionality-with-this-snippet
 server.use( ( request, response, next ) => {
@@ -95,8 +97,14 @@ server.use( ( request, response, next ) => {
 } );
 
 // Enable OPTIONS for CORS
-server.opts( /.*/, ( req, res ) => {
-    res.send( CORS_OPTIONS_STATUS_CODE )
+server.on( 'MethodNotAllowed', ( request, response ) => {
+    if ( request.method.toUpperCase() === 'OPTIONS' ) {
+        // Send the CORS headers
+        response.header( 'Access-Control-Allow-Headers', restify.CORS.ALLOW_HEADERS.join( ', ' ) );
+        response.send( CORS_OPTIONS_STATUS_CODE );
+    } else {
+        response.send( new restify.MethodNotAllowedError() );
+    }
 } );
 
 server.get( '/', ( request, response ) => {
