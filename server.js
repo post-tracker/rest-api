@@ -102,6 +102,7 @@ server.on( 'MethodNotAllowed', ( request, response ) => {
     if ( request.method.toUpperCase() === 'OPTIONS' ) {
         // Send the CORS headers
         response.header( 'Access-Control-Allow-Headers', restify.CORS.ALLOW_HEADERS.join( ', ' ) );
+        response.header( 'Access-Control-Allow-Methods', '*' );
         response.send( CORS_OPTIONS_STATUS_CODE );
     } else {
         response.send( new restify.MethodNotAllowedError() );
