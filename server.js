@@ -376,6 +376,39 @@ server.get(
 );
 
 server.get(
+    '/:game/developers',
+    passport.authenticate( 'bearer', {
+        session: false,
+    } ),
+    ( request, response ) => {
+        const query = {
+            include: [
+                {
+                    attributes: [],
+                    model: models.Game,
+                    where: {
+                        identifier: request.params.game,
+                    },
+                },
+                {
+                    model: models.Account,
+                },
+            ],
+            model: models.Developer,
+            where: {},
+        };
+
+        models.Developer.findAll( query )
+            .then( ( accounts ) => {
+                response.send( accounts );
+            } )
+            .catch( ( queryError ) => {
+                console.log( queryError );
+            } );
+    }
+);
+
+server.get(
     '/:game/hashes',
     passport.authenticate( 'bearer', {
         session: false,
