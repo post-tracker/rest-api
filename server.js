@@ -14,6 +14,7 @@ const LISTEN_PORT = 3000;
 
 const JSON_INDENTATION = 4;
 
+const INTERNAL_SERVER_ERROR_STATUS_CODE = 500;
 const MALFORMED_REQUEST_STATUS_CODE = 400;
 const PASSPORT_REDIRECT_STATUS_CODE = 302;
 const CORS_OPTIONS_STATUS_CODE = 204;
@@ -560,6 +561,7 @@ server.post(
 server.on( 'uncaughtException', ( request, response, route, error ) => {
     console.log( `uncaughtException for ${ route.spec.method } ${ route.spec.path }` );
     console.log( error );
+    response.send( INTERNAL_SERVER_ERROR_STATUS_CODE );
 } );
 
 server.listen( LISTEN_PORT, () => {
