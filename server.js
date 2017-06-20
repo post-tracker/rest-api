@@ -557,6 +557,194 @@ server.post(
     }
 );
 
+server.post(
+    '/:game/accounts',
+    passport.authenticate( 'bearer', {
+        session: false,
+    } ),
+    ( request, response ) => {
+        // console.log( request.body );
+        models.Account.findOrCreate(
+            {
+                defaults: {
+                    developerId: request.body.developerId,
+                    identifier: request.body.identifier,
+                    service: request.body.service,
+                },
+                where: {
+                    identifier: request.body.identifier,
+                    service: request.body.service,
+                },
+            }
+        )
+        .then( ( result ) => {
+            const [ accountInstance, created ] = result;
+
+            if ( created ) {
+                console.log( `${ new Date() } - account added` );
+                // console.log( accountInstance.get() );
+            } else {
+                // console.log( accountInstance.get() );
+            }
+
+            response.send( 'OK' );
+        } )
+        .catch( ( accountCreateError ) => {
+            response.send( MALFORMED_REQUEST_STATUS_CODE );
+            if ( accountCreateError.fields ) {
+                console.log( `${ accountCreateError.name }\n${ JSON.stringify( accountCreateError.fields, null, JSON_INDENTATION ) }` );
+            } else {
+                console.log( accountCreateError );
+            }
+        } );
+    }
+);
+
+server.post(
+    '/:game/developers',
+    passport.authenticate( 'bearer', {
+        session: false,
+    } ),
+    ( request, response ) => {
+        models.Developer.findOrCreate(
+            {
+                defaults: {
+                    active: request.body.active,
+                    gameId: request.body.gameId,
+                    group: request.body.group,
+                    name: request.body.name,
+                    nick: request.body.nick,
+                    role: request.body.role,
+                },
+                where: {
+                    gameId: request.body.gameId,
+                    nick: request.body.nick,
+                },
+            }
+        )
+        .then( ( result ) => {
+            const [ developerInstance, created ] = result;
+
+            if ( created ) {
+                console.log( `${ new Date() } - developer added for ${ request.params.game }` );
+                // console.log( developerInstance.get() );
+            } else {
+                // console.log( developerInstance.get() );
+            }
+
+            response.send( 'OK' );
+        } )
+        .catch( ( developerCreateError ) => {
+            response.send( MALFORMED_REQUEST_STATUS_CODE );
+            if ( developerCreateError.fields ) {
+                console.log( `${ developerCreateError.name }\n${ JSON.stringify( developerCreateError.fields, null, JSON_INDENTATION ) }` );
+            } else {
+                console.log( developerCreateError );
+            }
+        } );
+    }
+);
+
+server.patch(
+    '/:game/developers/:id',
+    passport.authenticate( 'bearer', {
+        session: false,
+    } ),
+    ( request, response ) => {
+        models.Developer.update(
+            request.body.properties,
+            {
+                where: {
+                    id: request.params.id,
+                },
+            }
+        )
+        .then( ( result ) => {
+            if ( result[ 0 ] > 0 ) {
+                console.log( `${ new Date() } - ${ result[ 0 ] } developers updated` );
+            }
+
+            response.send( 'OK' );
+        } )
+        .catch( ( developerCreateError ) => {
+            response.send( MALFORMED_REQUEST_STATUS_CODE );
+            if ( developerCreateError.fields ) {
+                console.log( `${ developerCreateError.name }\n${ JSON.stringify( developerCreateError.fields, null, JSON_INDENTATION ) }` );
+            } else {
+                console.log( developerCreateError );
+            }
+        } );
+    }
+);
+
+server.patch(
+    '/:game/accounts/:id',
+    passport.authenticate( 'bearer', {
+        session: false,
+    } ),
+    ( request, response ) => {
+        models.Account.update(
+            request.body.properties,
+            {
+                where: {
+                    id: request.params.id,
+                },
+            }
+        )
+        .then( ( result ) => {
+            if ( result[ 0 ] > 0 ) {
+                console.log( `${ new Date() } - ${ result[ 0 ] } accounts updated` );
+            }
+
+            response.send( 'OK' );
+        } )
+        .catch( ( developerCreateError ) => {
+            response.send( MALFORMED_REQUEST_STATUS_CODE );
+            if ( developerCreateError.fields ) {
+                console.log( `${ developerCreateError.name }\n${ JSON.stringify( developerCreateError.fields, null, JSON_INDENTATION ) }` );
+            } else {
+                console.log( developerCreateError );
+            }
+        } );
+    }
+);
+
+server.del(
+    '/:game/accounts/:id',
+    passport.authenticate( 'bearer', {
+        session: false,
+    } ),
+    ( request, response ) => {
+        // console.log( request.body );
+        models.Account.destroy(
+            {
+                where: {
+                    id: request.params.id,
+                },
+            }
+        )
+        .then( ( deletedCount ) => {
+            if ( deletedCount === 1 ) {
+                console.log( `${ new Date() } - account deleted` );
+                // console.log( accountInstance.get() );
+            } else {
+                console.log( `${ deletedCount } accounts deleted` );
+            }
+            
+            response.send( 'OK' );
+        } )
+        .catch( ( accountDeleteError ) => {
+            response.send( MALFORMED_REQUEST_STATUS_CODE );
+            
+            if ( accountDeleteError.fields ) {
+                console.log( `${ accountDeleteError.name }\n${ JSON.stringify( accountDeleteError.fields, null, JSON_INDENTATION ) }` );
+            } else {
+                console.log( accountDeleteError );
+            }
+        } );
+    }
+);
+
 // eslint-disable-next-line max-params
 server.on( 'uncaughtException', ( request, response, route, error ) => {
     console.log( `uncaughtException for ${ route.spec.method } ${ route.spec.path }` );
