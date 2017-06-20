@@ -576,8 +576,13 @@ server.post(
                 },
             }
         )
-        .then( () => {
-            console.log( 'Post added' );
+        .then( ( result ) => {
+            const [ postInstance, created ] = result;
+
+            if ( created ) {
+                console.log( `${ new Date() } - post added` );
+            }
+
             response.send( 'OK' );
         } )
         .catch( ( postCreateError ) => {
@@ -764,12 +769,12 @@ server.del(
             } else {
                 console.log( `${ deletedCount } accounts deleted` );
             }
-            
+
             response.send( 'OK' );
         } )
         .catch( ( accountDeleteError ) => {
             response.send( MALFORMED_REQUEST_STATUS_CODE );
-            
+
             if ( accountDeleteError.fields ) {
                 console.log( `${ accountDeleteError.name }\n${ JSON.stringify( accountDeleteError.fields, null, JSON_INDENTATION ) }` );
             } else {
