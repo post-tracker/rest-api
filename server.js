@@ -311,6 +311,7 @@ server.get(
         models.Game.findAll(
             {
                 attributes: [
+                    'id',
                     'identifier',
                     'name',
                     'shortName',
@@ -528,7 +529,7 @@ server.post(
         models.Post.findOrCreate(
             {
                 defaults: {
-                    accountId: request.body.id,
+                    accountId: request.body.accountId,
                     content: request.body.content,
                     section: request.body.section,
                     timestamp: request.body.timestamp,
