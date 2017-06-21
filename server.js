@@ -6,18 +6,20 @@ const restify = require( 'restify' );
 const jsonfile = require( 'jsonfile' );
 const passport = require( 'passport' );
 const alphanumSort = require( 'alphanum-sort' );
+const Hashids = require( 'hashids' );
 const Strategy = require( 'passport-http-bearer' ).Strategy;
 
 const models = require( './models' );
 
 const LISTEN_PORT = 3000;
-
 const JSON_INDENTATION = 4;
-
 const INTERNAL_SERVER_ERROR_STATUS_CODE = 500;
 const MALFORMED_REQUEST_STATUS_CODE = 400;
 const PASSPORT_REDIRECT_STATUS_CODE = 302;
 const CORS_OPTIONS_STATUS_CODE = 204;
+const ID_HASH_MIN_LENGTH = 8;
+
+const hashids = new Hashids( '', ID_HASH_MIN_LENGTH, 'abcdefghijklmnopqrstuvwxyz' );
 
 const server = restify.createServer( {
     // eslint-disable-next-line no-sync
@@ -224,8 +226,20 @@ server.get( '/:game/posts', ( request, response ) => {
     }
 
     models.Post.findAll( query )
-        .then( ( posts ) => {
-            response.send( posts );
+        .then( ( postInstances ) => {
+            const posts = [];
+
+            for ( let i = 0; i < postInstances.length; i = i + 1 ) {
+                const post = postInstances[ i ].get();
+
+                post.id = hashids.encode( post.id );
+                posts.push( post );
+            }
+
+            response.send( {
+                // eslint-disable-next-line id-blacklist
+                data: posts,
+            } );
         } )
         .catch( ( findError ) => {
             throw findError;
@@ -284,18 +298,34 @@ server.get( '/:game/posts/:id', ( request, response ) => {
     query.include[ 0 ].include[ 0 ].include[ 0 ].where = {
         identifier: request.params.game,
     };
-
-    query.where = Object.assign(
-        {},
-        query.where,
-        {
-            id: request.params.id,
-        }
-    );
+    if ( Number( request.params.id ) ) {
+        query.where = Object.assign(
+            {},
+            query.where,
+            {
+                v1Id: request.params.id,
+            }
+        );
+    } else {
+        query.where = Object.assign(
+            {},
+            query.where,
+            {
+                id: hashids.decode( request.params.id ),
+            }
+        );
+    }
 
     models.Post.findAll( query )
-        .then( ( posts ) => {
-            response.send( posts );
+        .then( ( postInstances ) => {
+            const post = postInstances[ 0 ].get();
+
+            post.id = hashids.encode( post.id );
+
+            response.send( {
+                // eslint-disable-next-line id-blacklist
+                data: [ post ],
+            } );
         } )
         .catch( ( findError ) => {
             throw findError;
