@@ -61,6 +61,9 @@ models.Developer = sequelize.define(
         role: {
             type: Sequelize.STRING,
         },
+        v1Id: {
+            type: Sequelize.INTEGER,
+        },
     },
     {
         charset: 'utf8mb4',
@@ -125,6 +128,9 @@ models.Post = sequelize.define(
         urlHash: {
             type: Sequelize.STRING,
             unique: true,
+        },
+        v1Id: {
+            type: Sequelize.INTEGER,
         },
     },
     {
