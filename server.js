@@ -83,7 +83,7 @@ server.use( restify.CORS(
             'x-forwarded-for',
             'x-real-ip',
             'x-requested-with',
-        ]
+        ],
     }
 ) );
 
@@ -274,7 +274,9 @@ server.get( '/:game/posts/:id', ( request, response ) => {
                             {
                                 attributes: [],
                                 model: models.Game,
-                                where: {},
+                                where: {
+                                    identifier: request.params.game,
+                                },
                             },
                         ],
                         model: models.Developer,
@@ -285,7 +287,7 @@ server.get( '/:game/posts/:id', ( request, response ) => {
                 where: {},
             },
         ],
-        limit: 50,
+        limit: 1,
         order: [
             [
                 'timestamp',
@@ -295,9 +297,6 @@ server.get( '/:game/posts/:id', ( request, response ) => {
         where: {},
     };
 
-    query.include[ 0 ].include[ 0 ].include[ 0 ].where = {
-        identifier: request.params.game,
-    };
     if ( Number( request.params.id ) ) {
         query.where = Object.assign(
             {},
@@ -629,6 +628,7 @@ server.post(
 
             if ( created ) {
                 console.log( `${ new Date() } - post added` );
+                // const post = postInstance.get();
             }
 
             response.send( 'OK' );
