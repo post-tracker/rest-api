@@ -349,7 +349,10 @@ server.get(
             }
         )
             .then( ( games ) => {
-                response.send( games );
+                response.send( {
+                    // eslint-disable-next-line id-blacklist
+                    data: games,
+                } );
             } )
             .catch( ( queryError ) => {
                 console.log( queryError );
@@ -397,7 +400,10 @@ server.get(
 
         models.Account.findAll( query )
             .then( ( accounts ) => {
-                response.send( accounts );
+                response.send( {
+                    // eslint-disable-next-line id-blacklist
+                    data: accounts,
+                } );
             } )
             .catch( ( queryError ) => {
                 console.log( queryError );
@@ -429,8 +435,11 @@ server.get(
         };
 
         models.Developer.findAll( query )
-            .then( ( accounts ) => {
-                response.send( accounts );
+            .then( ( developers ) => {
+                response.send( {
+                    // eslint-disable-next-line id-blacklist
+                    data: developers,
+                } );
             } )
             .catch( ( queryError ) => {
                 console.log( queryError );
@@ -482,7 +491,10 @@ server.get(
                     urls.push( post.urlHash );
                 } );
 
-                response.send( urls );
+                response.send( {
+                    // eslint-disable-next-line id-blacklist
+                    data: urls,
+                } );
             } )
             .catch( ( queryError ) => {
                 console.log( queryError );
@@ -525,12 +537,15 @@ server.get(
                     services.push( currentObject.service );
                 } );
 
-                response.send( alphanumSort(
-                    [ ...new Set( services ) ],
-                    {
-                        insensitive: true,
-                    }
-                ) );
+                response.send( {
+                    // eslint-disable-next-line id-blacklist
+                    data: alphanumSort(
+                        [ ...new Set( services ) ],
+                        {
+                            insensitive: true,
+                        }
+                    ),
+                } );
             } )
             .catch( ( queryError ) => {
                 console.log( queryError );
@@ -570,12 +585,15 @@ server.get(
                     groups.push( currentObject.group );
                 } );
 
-                response.send( alphanumSort(
-                    [ ...new Set( groups ) ],
-                    {
-                        insensitive: true,
-                    }
-                ) );
+                response.send( {
+                    // eslint-disable-next-line id-blacklist
+                    data: alphanumSort(
+                        [ ...new Set( groups ) ],
+                        {
+                            insensitive: true,
+                        }
+                    )
+                } );
             } )
             .catch( ( queryError ) => {
                 console.log( queryError );
