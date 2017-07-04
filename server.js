@@ -115,7 +115,7 @@ server.on( 'MethodNotAllowed', ( request, response ) => {
 } );
 
 server.get( '/', ( request, response ) => {
-    response.send( 'Hello' );
+    response.send( 'Wanna do cool stuff? Msg me wherever /u/Kokarn kokarn@gmail @oskarrisberg' );
 } );
 
 server.get( '/:game/posts', ( request, response ) => {
