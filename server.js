@@ -633,7 +633,7 @@ server.post(
             const [ postInstance, created ] = result;
 
             if ( created ) {
-                console.log( `${ new Date() } - post added` );
+                console.log( `${ new Date() } - post added for ${ request.params.game }` );
                 // const post = postInstance.get();
             }
 
