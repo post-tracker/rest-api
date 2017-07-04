@@ -15,6 +15,8 @@ const LISTEN_PORT = 3000;
 const JSON_INDENTATION = 4;
 const INTERNAL_SERVER_ERROR_STATUS_CODE = 500;
 const MALFORMED_REQUEST_STATUS_CODE = 400;
+const NOT_FOUND_STATUS_CODE = 404;
+const EXISTING_RESOURCE_STATUS_CODE = 409;
 const PASSPORT_REDIRECT_STATUS_CODE = 302;
 const CORS_OPTIONS_STATUS_CODE = 204;
 const ID_HASH_MIN_LENGTH = 8;
@@ -317,14 +319,18 @@ server.get( '/:game/posts/:id', ( request, response ) => {
 
     models.Post.findAll( query )
         .then( ( postInstances ) => {
-            const post = postInstances[ 0 ].get();
+            if ( postInstances && postInstances[ 0 ] ) {
+                const post = postInstances[ 0 ].get();
 
-            post.id = hashids.encode( post.id );
+                post.id = hashids.encode( post.id );
 
-            response.send( {
-                // eslint-disable-next-line id-blacklist
-                data: [ post ],
-            } );
+                response.send( {
+                    // eslint-disable-next-line id-blacklist
+                    data: [ post ],
+                } );
+            } else {
+                response.send( NOT_FOUND_STATUS_CODE );
+            }
         } )
         .catch( ( findError ) => {
             throw findError;
@@ -669,12 +675,10 @@ server.post(
 
             if ( created ) {
                 console.log( `${ new Date() } - account added` );
-                // console.log( accountInstance.get() );
+                response.send( 'OK' );
             } else {
-                // console.log( accountInstance.get() );
+                response.send( EXISTING_RESOURCE_STATUS_CODE );
             }
-
-            response.send( 'OK' );
         } )
         .catch( ( accountCreateError ) => {
             response.send( MALFORMED_REQUEST_STATUS_CODE );
@@ -714,12 +718,10 @@ server.post(
 
             if ( created ) {
                 console.log( `${ new Date() } - developer added for ${ request.params.game }` );
-                // console.log( developerInstance.get() );
+                response.send( 'OK' );
             } else {
-                // console.log( developerInstance.get() );
+                response.send( EXISTING_RESOURCE_STATUS_CODE );
             }
-
-            response.send( 'OK' );
         } )
         .catch( ( developerCreateError ) => {
             response.send( MALFORMED_REQUEST_STATUS_CODE );
