@@ -8,6 +8,7 @@ const passport = require( 'passport' );
 const alphanumSort = require( 'alphanum-sort' );
 const Hashids = require( 'hashids' );
 const Strategy = require( 'passport-http-bearer' ).Strategy;
+const corsMiddleware = require( 'restify-cors-middleware' );
 
 const models = require( './models' );
 
@@ -62,280 +63,246 @@ passport.use( new Strategy(
     }
 ) );
 
-server.use( restify.bodyParser() );
-server.use( restify.queryParser() );
-server.use( restify.gzipResponse() );
-// eslint-disable-next-line new-cap
-server.use( restify.CORS(
-    {
-        headers: [
-            'accept',
-            'authorization',
-            'cache-control',
-            'connection',
-            'content-type',
-            'dnt',
-            'host',
-            'if-modified-since',
-            'keep-alive',
-            'upgrade',
-            'user-agent',
-            'withcredentials',
-            'x-customheader',
-            'x-forwarded-for',
-            'x-real-ip',
-            'x-requested-with',
-        ],
-    }
-) );
-
-restify.CORS.ALLOW_HEADERS.push( 'authorization' );
-
-// Implement restify redirect so we can use passport
-// https://coderwall.com/p/arjzog/make-passport-work-with-restify-by-fixing-redirect-functionality-with-this-snippet
-server.use( ( request, response, next ) => {
-    response.redirect = ( address ) => {
-        response.header( 'Location', address );
-        response.send( PASSPORT_REDIRECT_STATUS_CODE );
-    };
-
-    next();
+const cors = corsMiddleware( {
+    allowHeaders: [ 'authorization' ],
+    exposeHeaders: [ 'authorization' ],
+    origins: [ '*' ],
 } );
 
-// Enable OPTIONS for CORS
-server.on( 'MethodNotAllowed', ( request, response ) => {
-    if ( request.method.toUpperCase() === 'OPTIONS' ) {
-        // Send the CORS headers
-        response.header( 'Access-Control-Allow-Headers', restify.CORS.ALLOW_HEADERS.join( ', ' ) );
-        response.header( 'Access-Control-Allow-Methods', '*' );
-        response.send( CORS_OPTIONS_STATUS_CODE );
-    } else {
-        response.send( new restify.MethodNotAllowedError() );
-    }
-} );
+server.pre( cors.preflight )
+server.use( cors.actual );
+server.use( restify.plugins.bodyParser() );
+server.use( restify.plugins.queryParser() );
+server.use( restify.plugins.gzipResponse() );
 
 server.get( '/', ( request, response ) => {
     response.send( 'Wanna do cool stuff? Msg me wherever /u/Kokarn kokarn@gmail @oskarrisberg' );
 } );
 
-server.get( '/:game/posts', ( request, response ) => {
-    const query = {
-        attributes: [
-            'content',
-            'id',
-            'section',
-            'timestamp',
-            'topic',
-            'topicUrl',
-            'url',
-            'urlHash',
-        ],
-        include: [
-            {
-                attributes: [
-                    'identifier',
-                    'service',
-                ],
-                include: [
-                    {
-                        attributes: [
-                            'group',
-                            'name',
-                            'nick',
-                            'role',
-                        ],
-                        include: [
-                            {
-                                attributes: [],
-                                model: models.Game,
-                                where: {},
-                            },
-                        ],
-                        model: models.Developer,
-                        where: {},
-                    },
-                ],
-                model: models.Account,
-                where: {},
-            },
-        ],
-        limit: 50,
-        order: [
-            [
+server.get(
+    '/:game/posts',
+    ( request, response ) => {
+        const query = {
+            attributes: [
+                'content',
+                'id',
+                'section',
                 'timestamp',
-                'DESC',
+                'topic',
+                'topicUrl',
+                'url',
+                'urlHash',
             ],
-        ],
-        where: {},
-    };
-
-    query.include[ 0 ].include[ 0 ].include[ 0 ].where = {
-        identifier: request.params.game,
-    };
-
-    if ( request.query.search ) {
-        query.where = Object.assign(
-            {},
-            query.where,
-            {
-                content: {
-                    $like: `%${ request.query.search }%`,
+            include: [
+                {
+                    attributes: [
+                        'identifier',
+                        'service',
+                    ],
+                    include: [
+                        {
+                            attributes: [
+                                'group',
+                                'name',
+                                'nick',
+                                'role',
+                            ],
+                            include: [
+                                {
+                                    attributes: [],
+                                    model: models.Game,
+                                    where: {},
+                                },
+                            ],
+                            model: models.Developer,
+                            where: {},
+                        },
+                    ],
+                    model: models.Account,
+                    where: {},
                 },
-            }
-        );
-    }
+            ],
+            limit: 50,
+            order: [
+                [
+                    'timestamp',
+                    'DESC',
+                ],
+            ],
+            where: {},
+        };
 
-    if ( request.query.services ) {
-        query.include[ 0 ].where = Object.assign(
-            {},
-            query.include[ 0 ].where,
-            {
-                service: {
-                    $in: request.query.services,
-                },
-            }
-        );
-    }
+        query.include[ 0 ].include[ 0 ].include[ 0 ].where = {
+            identifier: request.params.game,
+        };
 
-    if ( request.query.groups ) {
-        query.include[ 0 ].include[ 0 ].where = Object.assign(
-            {},
-            query.include[ 0 ].include[ 0 ].where,
-            {
-                group: {
-                    $in: request.query.groups,
-                },
-            }
-        );
-    }
-
-    if ( request.query.excludeService ) {
-        let serviceWhere = {};
-
-        if ( query.include[ 0 ].where.service ) {
-            serviceWhere = query.include[ 0 ].where.service;
+        if ( request.query.search ) {
+            query.where = Object.assign(
+                {},
+                query.where,
+                {
+                    content: {
+                        $like: `%${ request.query.search }%`,
+                    },
+                }
+            );
         }
 
-        serviceWhere.$notIn = [ request.query.excludeService ];
-
-        query.include[ 0 ].where = Object.assign(
-            {},
-            query.include[ 0 ].where,
-            {
-                service: serviceWhere,
-            }
-        );
-    }
-
-    models.Post.findAll( query )
-        .then( ( postInstances ) => {
-            const posts = [];
-
-            for ( let i = 0; i < postInstances.length; i = i + 1 ) {
-                const post = postInstances[ i ].get();
-
-                post.id = hashids.encode( post.id );
-                posts.push( post );
-            }
-
-            response.send( {
-                // eslint-disable-next-line id-blacklist
-                data: posts,
-            } );
-        } )
-        .catch( ( findError ) => {
-            throw findError;
-        } );
-} );
-
-server.get( '/:game/posts/:id', ( request, response ) => {
-    const query = {
-        attributes: [
-            'content',
-            'id',
-            'timestamp',
-            'topic',
-            'topicUrl',
-            'url',
-        ],
-        include: [
-            {
-                attributes: [
-                    'identifier',
-                    'service',
-                ],
-                include: [
-                    {
-                        attributes: [
-                            'group',
-                            'name',
-                            'nick',
-                            'role',
-                        ],
-                        include: [
-                            {
-                                attributes: [],
-                                model: models.Game,
-                                where: {
-                                    identifier: request.params.game,
-                                },
-                            },
-                        ],
-                        model: models.Developer,
-                        where: {},
+        if ( request.query.services ) {
+            query.include[ 0 ].where = Object.assign(
+                {},
+                query.include[ 0 ].where,
+                {
+                    service: {
+                        $in: request.query.services,
                     },
-                ],
-                model: models.Account,
-                where: {},
-            },
-        ],
-        limit: 1,
-        order: [
-            [
-                'timestamp',
-                'DESC',
-            ],
-        ],
-        where: {},
-    };
+                }
+            );
+        }
 
-    if ( Number( request.params.id ) ) {
-        query.where = Object.assign(
-            {},
-            query.where,
-            {
-                v1Id: request.params.id,
+        if ( request.query.groups ) {
+            query.include[ 0 ].include[ 0 ].where = Object.assign(
+                {},
+                query.include[ 0 ].include[ 0 ].where,
+                {
+                    group: {
+                        $in: request.query.groups,
+                    },
+                }
+            );
+        }
+
+        if ( request.query.excludeService ) {
+            let serviceWhere = {};
+
+            if ( query.include[ 0 ].where.service ) {
+                serviceWhere = query.include[ 0 ].where.service;
             }
-        );
-    } else {
-        query.where = Object.assign(
-            {},
-            query.where,
-            {
-                id: hashids.decode( request.params.id ),
-            }
-        );
-    }
 
-    models.Post.findAll( query )
-        .then( ( postInstances ) => {
-            if ( postInstances && postInstances[ 0 ] ) {
-                const post = postInstances[ 0 ].get();
+            serviceWhere.$notIn = [ request.query.excludeService ];
 
-                post.id = hashids.encode( post.id );
+            query.include[ 0 ].where = Object.assign(
+                {},
+                query.include[ 0 ].where,
+                {
+                    service: serviceWhere,
+                }
+            );
+        }
+
+        models.Post.findAll( query )
+            .then( ( postInstances ) => {
+                const posts = [];
+
+                for ( let i = 0; i < postInstances.length; i = i + 1 ) {
+                    const post = postInstances[ i ].get();
+
+                    post.id = hashids.encode( post.id );
+                    posts.push( post );
+                }
 
                 response.send( {
                     // eslint-disable-next-line id-blacklist
-                    data: [ post ],
+                    data: posts,
                 } );
-            } else {
-                response.send( NOT_FOUND_STATUS_CODE );
-            }
-        } )
-        .catch( ( findError ) => {
-            throw findError;
-        } );
-} );
+            } )
+            .catch( ( findError ) => {
+                throw findError;
+            } );
+    }
+);
+
+server.get(
+    '/:game/posts/:id',
+    ( request, response ) => {
+        const query = {
+            attributes: [
+                'content',
+                'id',
+                'timestamp',
+                'topic',
+                'topicUrl',
+                'url',
+            ],
+            include: [
+                {
+                    attributes: [
+                        'identifier',
+                        'service',
+                    ],
+                    include: [
+                        {
+                            attributes: [
+                                'group',
+                                'name',
+                                'nick',
+                                'role',
+                            ],
+                            include: [
+                                {
+                                    attributes: [],
+                                    model: models.Game,
+                                    where: {
+                                        identifier: request.params.game,
+                                    },
+                                },
+                            ],
+                            model: models.Developer,
+                            where: {},
+                        },
+                    ],
+                    model: models.Account,
+                    where: {},
+                },
+            ],
+            limit: 1,
+            order: [
+                [
+                    'timestamp',
+                    'DESC',
+                ],
+            ],
+            where: {},
+        };
+
+        if ( Number( request.params.id ) ) {
+            query.where = Object.assign(
+                {},
+                query.where,
+                {
+                    v1Id: request.params.id,
+                }
+            );
+        } else {
+            query.where = Object.assign(
+                {},
+                query.where,
+                {
+                    id: hashids.decode( request.params.id ),
+                }
+            );
+        }
+
+        models.Post.findAll( query )
+            .then( ( postInstances ) => {
+                if ( postInstances && postInstances[ 0 ] ) {
+                    const post = postInstances[ 0 ].get();
+
+                    post.id = hashids.encode( post.id );
+
+                    response.send( {
+                        // eslint-disable-next-line id-blacklist
+                        data: [ post ],
+                    } );
+                } else {
+                    response.send( NOT_FOUND_STATUS_CODE );
+                }
+            } )
+            .catch( ( findError ) => {
+                throw findError;
+            } );
+    }
+);
 
 server.get(
     '/games',
@@ -397,8 +364,8 @@ server.get(
             where: {},
         };
 
-        if ( request.params.active && request.params.active.length > 0 ) {
-            const active = Number( request.params.active );
+        if ( request.query.active && request.query.active.length > 0 ) {
+            const active = Number( request.query.active );
 
             query.include[ 0 ].where.active = active;
         }
