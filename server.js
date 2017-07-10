@@ -67,7 +67,7 @@ const cors = corsMiddleware( {
     origins: [ '*' ],
 } );
 
-server.pre( cors.preflight )
+server.pre( cors.preflight );
 server.use( cors.actual );
 server.use( restify.plugins.bodyParser() );
 server.use( restify.plugins.queryParser() );
@@ -562,7 +562,7 @@ server.get(
                         {
                             insensitive: true,
                         }
-                    )
+                    ),
                 } );
             } )
             .catch( ( queryError ) => {
