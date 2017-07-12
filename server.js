@@ -121,15 +121,12 @@ server.get(
                                 {
                                     attributes: [],
                                     model: models.Game,
-                                    where: {},
                                 },
                             ],
                             model: models.Developer,
-                            where: {},
                         },
                     ],
                     model: models.Account,
-                    where: {},
                 },
             ],
             limit: 50,
@@ -139,16 +136,14 @@ server.get(
                     'DESC',
                 ],
             ],
-            where: {},
+            where: {
+                '$account.developer.game.identifier$': request.params.game,
+            },
         };
 
         response.cache( 'public', {
             maxAge: CACHE_TIMES.posts,
         } );
-
-        query.include[ 0 ].include[ 0 ].include[ 0 ].where = {
-            identifier: request.params.game,
-        };
 
         if ( request.query.search ) {
             query.where = Object.assign(
@@ -163,11 +158,11 @@ server.get(
         }
 
         if ( request.query.services ) {
-            query.include[ 0 ].where = Object.assign(
+            query.where = Object.assign(
                 {},
-                query.include[ 0 ].where,
+                query.where,
                 {
-                    service: {
+                    '$account.service$': {
                         $in: request.query.services,
                     },
                 }
@@ -175,11 +170,11 @@ server.get(
         }
 
         if ( request.query.groups ) {
-            query.include[ 0 ].include[ 0 ].where = Object.assign(
+            query.where = Object.assign(
                 {},
-                query.include[ 0 ].include[ 0 ].where,
+                query.where,
                 {
-                    group: {
+                    '$account.developer.group$': {
                         $in: request.query.groups,
                     },
                 }
@@ -187,19 +182,13 @@ server.get(
         }
 
         if ( request.query.excludeService ) {
-            let serviceWhere = {};
-
-            if ( query.include[ 0 ].where.service ) {
-                serviceWhere = query.include[ 0 ].where.service;
-            }
-
-            serviceWhere.$notIn = [ request.query.excludeService ];
-
-            query.include[ 0 ].where = Object.assign(
+            query.where = Object.assign(
                 {},
-                query.include[ 0 ].where,
+                query.where,
                 {
-                    service: serviceWhere,
+                    '$account.service$': {
+                        $notIn: [ request.query.excludeService ],
+                    },
                 }
             );
         }
