@@ -67,11 +67,17 @@ const cors = corsMiddleware( {
     origins: [ '*' ],
 } );
 
+const addHeader = ( request, response, next ) => {
+    response.setHeader( 'vary', 'accept-encoding' );
+    next();
+};
+
 server.pre( cors.preflight );
 server.use( cors.actual );
 server.use( restify.plugins.bodyParser() );
 server.use( restify.plugins.queryParser() );
 server.use( restify.plugins.gzipResponse() );
+server.use( addHeader );
 
 server.get( '/', ( request, response ) => {
     response.send( 'Wanna do cool stuff? Msg me wherever /u/Kokarn kokarn@gmail @oskarrisberg' );
