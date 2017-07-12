@@ -150,9 +150,18 @@ server.get(
                 {},
                 query.where,
                 {
-                    content: {
-                        $like: `%${ request.query.search }%`,
-                    },
+                    $or: [
+                        {
+                            content: {
+                                $like: `%${ request.query.search }%`,
+                            },
+                        },
+                        {
+                            '$account.developer.nick$': {
+                                $like: `%${ request.query.search }%`,
+                            },
+                        },
+                    ],
                 }
             );
         }
