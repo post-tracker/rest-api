@@ -19,6 +19,12 @@ const MALFORMED_REQUEST_STATUS_CODE = 400;
 const NOT_FOUND_STATUS_CODE = 404;
 const EXISTING_RESOURCE_STATUS_CODE = 409;
 const ID_HASH_MIN_LENGTH = 8;
+const CACHE_TIMES = {
+    groups: 3600,
+    posts: 60,
+    services: 3600,
+    singlePost: 2592000,
+};
 
 const hashids = new Hashids( '', ID_HASH_MIN_LENGTH, 'abcdefghijklmnopqrstuvwxyz' );
 
@@ -135,6 +141,10 @@ server.get(
             ],
             where: {},
         };
+
+        response.cache( 'public', {
+            maxAge: CACHE_TIMES.posts,
+        } );
 
         query.include[ 0 ].include[ 0 ].include[ 0 ].where = {
             identifier: request.params.game,
@@ -268,6 +278,10 @@ server.get(
             ],
             where: {},
         };
+
+        response.cache( 'public', {
+            maxAge: CACHE_TIMES.singlePost,
+        } );
 
         if ( Number( request.params.id ) ) {
             query.where = Object.assign(
@@ -505,6 +519,10 @@ server.get(
             where: {},
         };
 
+        response.cache( 'public', {
+            maxAge: CACHE_TIMES.services,
+        } );
+
         models.Account.findAll( query )
             .then( ( serviceObjects ) => {
                 const services = [];
@@ -552,6 +570,10 @@ server.get(
                 },
             },
         };
+
+        response.cache( 'public', {
+            maxAge: CACHE_TIMES.groups,
+        } );
 
         models.Developer.findAll( query )
             .then( ( groupObjects ) => {
