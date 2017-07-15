@@ -1,0 +1,41 @@
+{
+    "development": {
+        "username": "test",
+        "password": "test",
+        "database": "devtracker",
+        "host": "127.0.0.1",
+        "dialect": "mysql",
+        "logging": false,
+        "dialectOptions": {
+            "charset": "utf8mb4"
+        },
+        "pool": {
+            "max": 5,
+            "min": 0,
+            "idle": 10000
+        }
+    },
+    "test": {
+        "username": "test",
+        "password": "test",
+        "database": "devtracker",
+        "host": "127.0.0.1",
+        "dialect": "mysql"
+    },
+    "production": {
+        "username": "test",
+        "password": "test",
+        "database": "devtracker",
+        "host": "127.0.0.1",
+        "dialect": "mysql",
+        "logging": false,
+        "dialectOptions": {
+            "charset": "utf8mb4"
+        },
+        "pool": {
+            "max": 50,
+            "min": 0,
+            "idle": 10000
+        }
+    }
+}

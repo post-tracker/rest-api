@@ -23,3 +23,13 @@ mysql --user="root" --password="root" --execute="GRANT ALL PRIVILEGES ON *.* TO 
 systemctl restart mysql.service
 
 systemctl status mysql.service
+
+cp /vagrant/scripts/dev.json /vagrant/config/config.json
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=localhost" -keyout /vagrant/assets/privkey.pem -out /vagrant/assets/fullchain.pem
+
+npm i -g pm2
+cd /vagrant
+# mysql2 needs to be installed locally in the machine
+npm i mysql2 --no-bin-links
+pm2 start ecosystem.json
