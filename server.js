@@ -9,6 +9,7 @@ const alphanumSort = require( 'alphanum-sort' );
 const Hashids = require( 'hashids' );
 const Strategy = require( 'passport-http-bearer' ).Strategy;
 const corsMiddleware = require( 'restify-cors-middleware' );
+const apicache = require( 'apicache' );
 
 const models = require( './models' );
 
@@ -27,6 +28,7 @@ const CACHE_TIMES = {
 };
 
 const hashids = new Hashids( '', ID_HASH_MIN_LENGTH, 'abcdefghijklmnopqrstuvwxyz' );
+const cache = apicache.middleware;
 
 const server = restify.createServer( {
     // eslint-disable-next-line no-sync
@@ -91,6 +93,7 @@ server.get( '/', ( request, response ) => {
 
 server.get(
     '/:game/posts',
+    cache( '1 minute' ),
     ( request, response ) => {
         const query = {
             attributes: [
@@ -226,6 +229,7 @@ server.get(
 
 server.get(
     '/:game/posts/:id',
+    cache( '1 month' ),
     ( request, response ) => {
         const query = {
             attributes: [
@@ -492,6 +496,7 @@ server.get(
 
 server.get(
     '/:game/services',
+    cache( '1 hour' ),
     ( request, response ) => {
         const query = {
             attributes: [
@@ -547,6 +552,7 @@ server.get(
 
 server.get(
     '/:game/groups',
+    cache( '1 hour' ),
     ( request, response ) => {
         const query = {
             attributes: [
