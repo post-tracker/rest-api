@@ -831,6 +831,44 @@ server.del(
     }
 );
 
+server.del(
+    '/:game/posts/:url',
+    passport.authenticate( 'bearer', {
+        session: false,
+    } ),
+    ( request, response ) => {
+        models.Post.destroy(
+            {
+                where: {
+                    url: request.params.url,
+                },
+            }
+        )
+        .then( ( deletedCount ) => {
+            if ( deletedCount >= 1 ) {
+                if ( deletedCount === 1 ) {
+                    console.log( `${ new Date() } - post ${ request.params.url } deleted` );
+                } else {
+                    console.log( `${ deletedCount } posts deleted` );
+                }
+
+                response.send( 'OK' );
+            } else {
+                response.send( NOT_FOUND_STATUS_CODE );
+            }
+        } )
+        .catch( ( postDeleteError ) => {
+            response.send( MALFORMED_REQUEST_STATUS_CODE );
+
+            if ( postDeleteError.fields ) {
+                console.log( `${ postDeleteError.name }\n${ JSON.stringify( postDeleteError.fields, null, JSON_INDENTATION ) }` );
+            } else {
+                console.log( postDeleteError );
+            }
+        } );
+    }
+);
+
 // eslint-disable-next-line max-params
 server.on( 'restifyError', ( request, response, error ) => {
     console.error( `uncaughtException for ${ error }` );
