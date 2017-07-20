@@ -832,9 +832,8 @@ server.del(
 );
 
 // eslint-disable-next-line max-params
-server.on( 'uncaughtException', ( request, response, route, error ) => {
-    console.log( `uncaughtException for ${ route.spec.method } ${ route.spec.path }` );
-    console.log( error );
+server.on( 'restifyError', ( request, response, error ) => {
+    console.error( `uncaughtException for ${ error }` );
     response.send( INTERNAL_SERVER_ERROR_STATUS_CODE );
 } );
 
