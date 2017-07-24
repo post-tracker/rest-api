@@ -88,7 +88,7 @@ server.use( restify.plugins.gzipResponse() );
 server.use( addHeader );
 
 server.get( '/', ( request, response ) => {
-    response.send( 'Wanna do cool stuff? Msg me wherever /u/Kokarn kokarn@gmail @oskarrisberg' );
+    response.json( 'Wanna do cool stuff? Msg me wherever /u/Kokarn kokarn@gmail @oskarrisberg' );
 } );
 
 server.get(
@@ -216,7 +216,7 @@ server.get(
                     posts.push( post );
                 }
 
-                response.send( {
+                response.json( {
                     // eslint-disable-next-line id-blacklist
                     data: posts,
                 } );
@@ -310,7 +310,7 @@ server.get(
 
                     post.id = hashids.encode( post.id );
 
-                    response.send( {
+                    response.json( {
                         // eslint-disable-next-line id-blacklist
                         data: [ post ],
                     } );
@@ -341,7 +341,7 @@ server.get(
             }
         )
             .then( ( games ) => {
-                response.send( {
+                response.jaon( {
                     // eslint-disable-next-line id-blacklist
                     data: games,
                 } );
@@ -392,7 +392,7 @@ server.get(
 
         models.Account.findAll( query )
             .then( ( accounts ) => {
-                response.send( {
+                response.json( {
                     // eslint-disable-next-line id-blacklist
                     data: accounts,
                 } );
@@ -428,7 +428,7 @@ server.get(
 
         models.Developer.findAll( query )
             .then( ( developers ) => {
-                response.send( {
+                response.json( {
                     // eslint-disable-next-line id-blacklist
                     data: developers,
                 } );
@@ -483,7 +483,7 @@ server.get(
                     urls.push( post.urlHash );
                 } );
 
-                response.send( {
+                response.json( {
                     // eslint-disable-next-line id-blacklist
                     data: urls,
                 } );
@@ -534,7 +534,7 @@ server.get(
                     services.push( currentObject.service );
                 } );
 
-                response.send( {
+                response.json( {
                     // eslint-disable-next-line id-blacklist
                     data: alphanumSort(
                         [ ...new Set( services ) ],
@@ -587,7 +587,7 @@ server.get(
                     groups.push( currentObject.group );
                 } );
 
-                response.send( {
+                response.json( {
                     // eslint-disable-next-line id-blacklist
                     data: alphanumSort(
                         [ ...new Set( groups ) ],
@@ -634,7 +634,7 @@ server.post(
                 // const post = postInstance.get();
             }
 
-            response.send( 'OK' );
+            response.json( 'OK' );
         } )
         .catch( ( postCreateError ) => {
             response.send( MALFORMED_REQUEST_STATUS_CODE );
@@ -672,7 +672,7 @@ server.post(
 
             if ( created ) {
                 console.log( `${ new Date() } - account added` );
-                response.send( 'OK' );
+                response.json( 'OK' );
             } else {
                 response.send( EXISTING_RESOURCE_STATUS_CODE );
             }
@@ -715,7 +715,7 @@ server.post(
 
             if ( created ) {
                 console.log( `${ new Date() } - developer added for ${ request.params.game }` );
-                response.send( 'OK' );
+                response.json( 'OK' );
             } else {
                 response.send( EXISTING_RESOURCE_STATUS_CODE );
             }
@@ -750,7 +750,7 @@ server.patch(
                 console.log( `${ new Date() } - ${ result[ 0 ] } developers updated` );
             }
 
-            response.send( 'OK' );
+            response.json( 'OK' );
         } )
         .catch( ( developerCreateError ) => {
             response.send( MALFORMED_REQUEST_STATUS_CODE );
@@ -782,7 +782,7 @@ server.patch(
                 console.log( `${ new Date() } - ${ result[ 0 ] } accounts updated` );
             }
 
-            response.send( 'OK' );
+            response.json( 'OK' );
         } )
         .catch( ( developerCreateError ) => {
             response.send( MALFORMED_REQUEST_STATUS_CODE );
@@ -817,7 +817,7 @@ server.del(
                 console.log( `${ deletedCount } accounts deleted` );
             }
 
-            response.send( 'OK' );
+            response.json( 'OK' );
         } )
         .catch( ( accountDeleteError ) => {
             response.send( MALFORMED_REQUEST_STATUS_CODE );
@@ -852,7 +852,7 @@ server.del(
                     console.log( `${ deletedCount } posts deleted` );
                 }
 
-                response.send( 'OK' );
+                response.json( 'OK' );
             } else {
                 response.send( NOT_FOUND_STATUS_CODE );
             }
