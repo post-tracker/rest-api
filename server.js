@@ -345,7 +345,7 @@ server.get(
             }
         )
             .then( ( games ) => {
-                response.jaon( {
+                response.json( {
                     // eslint-disable-next-line id-blacklist
                     data: games,
                 } );
