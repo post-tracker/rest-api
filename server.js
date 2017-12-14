@@ -15,6 +15,7 @@ const models = require( './models' );
 
 const LISTEN_PORT = 3000;
 const JSON_INDENTATION = 4;
+const SUCCESS_STATUS_CODE = 200;
 const INTERNAL_SERVER_ERROR_STATUS_CODE = 500;
 const MALFORMED_REQUEST_STATUS_CODE = 400;
 const NOT_FOUND_STATUS_CODE = 404;
@@ -870,6 +871,34 @@ server.del(
                 console.log( postDeleteError );
             }
         } );
+    }
+);
+
+server.head(
+    '/:game/posts/:hash',
+    cache( '1 month' ),
+    ( request, response ) => {
+        const query = {
+            where: {
+                urlHash: request.params.hash,
+            },
+        };
+
+        response.cache( 'public', {
+            maxAge: CACHE_TIMES.singlePost,
+        } );
+
+        models.Post.count( query )
+            .then( ( postCount ) => {
+                if ( postCount ) {
+                    response.send( SUCCESS_STATUS_CODE );
+                } else {
+                    response.send( NOT_FOUND_STATUS_CODE );
+                }
+            } )
+            .catch( ( findError ) => {
+                throw findError;
+            } );
     }
 );
 
