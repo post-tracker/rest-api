@@ -338,6 +338,7 @@ server.get(
                     'identifier',
                     'name',
                     'shortName',
+                    'hostname',
                 ],
             }
         )
