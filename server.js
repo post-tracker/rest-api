@@ -339,6 +339,7 @@ server.get(
                     'name',
                     'shortName',
                     'hostname',
+                    'config',
                 ],
             }
         )
@@ -726,6 +727,81 @@ server.post(
                     console.log( `${ developerCreateError.name }\n${ JSON.stringify( developerCreateError.fields, null, JSON_INDENTATION ) }` );
                 } else {
                     console.log( developerCreateError );
+                }
+            } );
+    }
+);
+
+server.post(
+    '/games',
+    passport.authenticate( 'bearer', {
+        session: false,
+    } ),
+    ( request, response ) => {
+        models.Game.findOrCreate(
+            {
+                defaults: {
+                    config: request.body.config,
+                    hostname: request.body.hostname,
+                    identifier: request.body.identifier,
+                    name: request.body.name,
+                    shortName: request.body.shortName,
+                },
+                where: {
+                    identifier: request.body.identifier,
+                },
+            }
+        )
+            .then( ( result ) => {
+                const [ gameInstance, created ] = result;
+
+                if ( created ) {
+                    console.log( `${ new Date() } - New game added, ${ request.body.identifier }` );
+                    // const post = postInstance.get();
+                } else {
+                    console.log( `Game with identifier ${ request.body.identifier } already exists` );
+                }
+
+                response.json( 'OK' );
+            } )
+            .catch( ( gameCreateError ) => {
+                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                if ( gameCreateError.fields ) {
+                    console.log( `${ gameCreateError.name }\n${ JSON.stringify( gameCreateError.fields, null, JSON_INDENTATION ) }` );
+                } else {
+                    console.log( gameCreateError );
+                }
+            } );
+    }
+);
+
+server.patch(
+    '/games/:identifier',
+    passport.authenticate( 'bearer', {
+        session: false,
+    } ),
+    ( request, response ) => {
+        models.Game.update(
+            request.body.properties,
+            {
+                where: {
+                    identifier: request.params.identifier,
+                },
+            }
+        )
+            .then( ( result ) => {
+                if ( result[ 0 ] > 0 ) {
+                    console.log( `${ new Date() } - Game ${ request.params.id } updated` );
+                }
+
+                response.json( 'OK' );
+            } )
+            .catch( ( gameUpdateError ) => {
+                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                if ( gameUpdateError.fields ) {
+                    console.log( `${ gameUpdateError.name }\n${ JSON.stringify( gameUpdateError.fields, null, JSON_INDENTATION ) }` );
+                } else {
+                    console.log( gameUpdateError );
                 }
             } );
     }
