@@ -11,6 +11,9 @@ const sequelize = new Sequelize( config.database, config.username, config.passwo
 models.Game = sequelize.define(
     'game',
     {
+        config: {
+            type: Sequelize.JSON,
+        },
         hostname: {
             type: Sequelize.STRING,
         },
