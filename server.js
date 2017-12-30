@@ -791,10 +791,12 @@ server.patch(
         )
             .then( ( result ) => {
                 if ( result[ 0 ] > 0 ) {
-                    console.log( `${ new Date() } - Game ${ request.params.id } updated` );
+                    console.log( `${ new Date() } - ${ request.params.identifier } updated` );
+                    response.json( 'OK' );
+                } else {
+                    // console.log( result );
+                    response.send( NOT_FOUND_STATUS_CODE );
                 }
-
-                response.json( 'OK' );
             } )
             .catch( ( gameUpdateError ) => {
                 response.send( MALFORMED_REQUEST_STATUS_CODE );
