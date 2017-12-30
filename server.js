@@ -626,24 +626,24 @@ server.post(
                 },
             }
         )
-        .then( ( result ) => {
-            const [ postInstance, created ] = result;
+            .then( ( result ) => {
+                const [ postInstance, created ] = result;
 
-            if ( created ) {
-                console.log( `${ new Date() } - post added for ${ request.params.game }` );
-                // const post = postInstance.get();
-            }
+                if ( created ) {
+                    console.log( `${ new Date() } - post added for ${ request.params.game }` );
+                    // const post = postInstance.get();
+                }
 
-            response.json( 'OK' );
-        } )
-        .catch( ( postCreateError ) => {
-            response.send( MALFORMED_REQUEST_STATUS_CODE );
-            if ( postCreateError.fields ) {
-                console.log( `${ postCreateError.name }\n${ JSON.stringify( postCreateError.fields, null, JSON_INDENTATION ) }` );
-            } else {
-                console.log( postCreateError );
-            }
-        } );
+                response.json( 'OK' );
+            } )
+            .catch( ( postCreateError ) => {
+                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                if ( postCreateError.fields ) {
+                    console.log( `${ postCreateError.name }\n${ JSON.stringify( postCreateError.fields, null, JSON_INDENTATION ) }` );
+                } else {
+                    console.log( postCreateError );
+                }
+            } );
     }
 );
 
@@ -667,24 +667,24 @@ server.post(
                 },
             }
         )
-        .then( ( result ) => {
-            const [ accountInstance, created ] = result;
+            .then( ( result ) => {
+                const [ accountInstance, created ] = result;
 
-            if ( created ) {
-                console.log( `${ new Date() } - account added` );
-                response.json( 'OK' );
-            } else {
-                response.send( EXISTING_RESOURCE_STATUS_CODE );
-            }
-        } )
-        .catch( ( accountCreateError ) => {
-            response.send( MALFORMED_REQUEST_STATUS_CODE );
-            if ( accountCreateError.fields ) {
-                console.log( `${ accountCreateError.name }\n${ JSON.stringify( accountCreateError.fields, null, JSON_INDENTATION ) }` );
-            } else {
-                console.log( accountCreateError );
-            }
-        } );
+                if ( created ) {
+                    console.log( `${ new Date() } - account added` );
+                    response.json( 'OK' );
+                } else {
+                    response.send( EXISTING_RESOURCE_STATUS_CODE );
+                }
+            } )
+            .catch( ( accountCreateError ) => {
+                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                if ( accountCreateError.fields ) {
+                    console.log( `${ accountCreateError.name }\n${ JSON.stringify( accountCreateError.fields, null, JSON_INDENTATION ) }` );
+                } else {
+                    console.log( accountCreateError );
+                }
+            } );
     }
 );
 
@@ -710,24 +710,24 @@ server.post(
                 },
             }
         )
-        .then( ( result ) => {
-            const [ developerInstance, created ] = result;
+            .then( ( result ) => {
+                const [ developerInstance, created ] = result;
 
-            if ( created ) {
-                console.log( `${ new Date() } - developer added for ${ request.params.game }` );
-                response.json( 'OK' );
-            } else {
-                response.send( EXISTING_RESOURCE_STATUS_CODE );
-            }
-        } )
-        .catch( ( developerCreateError ) => {
-            response.send( MALFORMED_REQUEST_STATUS_CODE );
-            if ( developerCreateError.fields ) {
-                console.log( `${ developerCreateError.name }\n${ JSON.stringify( developerCreateError.fields, null, JSON_INDENTATION ) }` );
-            } else {
-                console.log( developerCreateError );
-            }
-        } );
+                if ( created ) {
+                    console.log( `${ new Date() } - developer added for ${ request.params.game }` );
+                    response.json( 'OK' );
+                } else {
+                    response.send( EXISTING_RESOURCE_STATUS_CODE );
+                }
+            } )
+            .catch( ( developerCreateError ) => {
+                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                if ( developerCreateError.fields ) {
+                    console.log( `${ developerCreateError.name }\n${ JSON.stringify( developerCreateError.fields, null, JSON_INDENTATION ) }` );
+                } else {
+                    console.log( developerCreateError );
+                }
+            } );
     }
 );
 
@@ -745,21 +745,21 @@ server.patch(
                 },
             }
         )
-        .then( ( result ) => {
-            if ( result[ 0 ] > 0 ) {
-                console.log( `${ new Date() } - ${ result[ 0 ] } developers updated` );
-            }
+            .then( ( result ) => {
+                if ( result[ 0 ] > 0 ) {
+                    console.log( `${ new Date() } - ${ result[ 0 ] } developers updated` );
+                }
 
-            response.json( 'OK' );
-        } )
-        .catch( ( developerCreateError ) => {
-            response.send( MALFORMED_REQUEST_STATUS_CODE );
-            if ( developerCreateError.fields ) {
-                console.log( `${ developerCreateError.name }\n${ JSON.stringify( developerCreateError.fields, null, JSON_INDENTATION ) }` );
-            } else {
-                console.log( developerCreateError );
-            }
-        } );
+                response.json( 'OK' );
+            } )
+            .catch( ( developerCreateError ) => {
+                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                if ( developerCreateError.fields ) {
+                    console.log( `${ developerCreateError.name }\n${ JSON.stringify( developerCreateError.fields, null, JSON_INDENTATION ) }` );
+                } else {
+                    console.log( developerCreateError );
+                }
+            } );
     }
 );
 
@@ -777,21 +777,21 @@ server.patch(
                 },
             }
         )
-        .then( ( result ) => {
-            if ( result[ 0 ] > 0 ) {
-                console.log( `${ new Date() } - ${ result[ 0 ] } accounts updated` );
-            }
+            .then( ( result ) => {
+                if ( result[ 0 ] > 0 ) {
+                    console.log( `${ new Date() } - ${ result[ 0 ] } accounts updated` );
+                }
 
-            response.json( 'OK' );
-        } )
-        .catch( ( developerCreateError ) => {
-            response.send( MALFORMED_REQUEST_STATUS_CODE );
-            if ( developerCreateError.fields ) {
-                console.log( `${ developerCreateError.name }\n${ JSON.stringify( developerCreateError.fields, null, JSON_INDENTATION ) }` );
-            } else {
-                console.log( developerCreateError );
-            }
-        } );
+                response.json( 'OK' );
+            } )
+            .catch( ( developerCreateError ) => {
+                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                if ( developerCreateError.fields ) {
+                    console.log( `${ developerCreateError.name }\n${ JSON.stringify( developerCreateError.fields, null, JSON_INDENTATION ) }` );
+                } else {
+                    console.log( developerCreateError );
+                }
+            } );
     }
 );
 
@@ -809,25 +809,25 @@ server.del(
                 },
             }
         )
-        .then( ( deletedCount ) => {
-            if ( deletedCount === 1 ) {
-                console.log( `${ new Date() } - account deleted` );
-                // console.log( accountInstance.get() );
-            } else {
-                console.log( `${ deletedCount } accounts deleted` );
-            }
+            .then( ( deletedCount ) => {
+                if ( deletedCount === 1 ) {
+                    console.log( `${ new Date() } - account deleted` );
+                    // console.log( accountInstance.get() );
+                } else {
+                    console.log( `${ deletedCount } accounts deleted` );
+                }
 
-            response.json( 'OK' );
-        } )
-        .catch( ( accountDeleteError ) => {
-            response.send( MALFORMED_REQUEST_STATUS_CODE );
+                response.json( 'OK' );
+            } )
+            .catch( ( accountDeleteError ) => {
+                response.send( MALFORMED_REQUEST_STATUS_CODE );
 
-            if ( accountDeleteError.fields ) {
-                console.log( `${ accountDeleteError.name }\n${ JSON.stringify( accountDeleteError.fields, null, JSON_INDENTATION ) }` );
-            } else {
-                console.log( accountDeleteError );
-            }
-        } );
+                if ( accountDeleteError.fields ) {
+                    console.log( `${ accountDeleteError.name }\n${ JSON.stringify( accountDeleteError.fields, null, JSON_INDENTATION ) }` );
+                } else {
+                    console.log( accountDeleteError );
+                }
+            } );
     }
 );
 
@@ -844,28 +844,28 @@ server.del(
                 },
             }
         )
-        .then( ( deletedCount ) => {
-            if ( deletedCount >= 1 ) {
-                if ( deletedCount === 1 ) {
-                    console.log( `${ new Date() } - post ${ request.params.url } deleted` );
+            .then( ( deletedCount ) => {
+                if ( deletedCount >= 1 ) {
+                    if ( deletedCount === 1 ) {
+                        console.log( `${ new Date() } - post ${ request.params.url } deleted` );
+                    } else {
+                        console.log( `${ deletedCount } posts deleted` );
+                    }
+
+                    response.json( 'OK' );
                 } else {
-                    console.log( `${ deletedCount } posts deleted` );
+                    response.send( NOT_FOUND_STATUS_CODE );
                 }
+            } )
+            .catch( ( postDeleteError ) => {
+                response.send( MALFORMED_REQUEST_STATUS_CODE );
 
-                response.json( 'OK' );
-            } else {
-                response.send( NOT_FOUND_STATUS_CODE );
-            }
-        } )
-        .catch( ( postDeleteError ) => {
-            response.send( MALFORMED_REQUEST_STATUS_CODE );
-
-            if ( postDeleteError.fields ) {
-                console.log( `${ postDeleteError.name }\n${ JSON.stringify( postDeleteError.fields, null, JSON_INDENTATION ) }` );
-            } else {
-                console.log( postDeleteError );
-            }
-        } );
+                if ( postDeleteError.fields ) {
+                    console.log( `${ postDeleteError.name }\n${ JSON.stringify( postDeleteError.fields, null, JSON_INDENTATION ) }` );
+                } else {
+                    console.log( postDeleteError );
+                }
+            } );
     }
 );
 
