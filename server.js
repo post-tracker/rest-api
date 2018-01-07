@@ -571,7 +571,14 @@ server.get(
             model: models.Developer,
             where: {
                 group: {
-                    $ne: null,
+                    $and: [
+                        {
+                            $ne: null,
+                        },
+                        {
+                            $ne: '',
+                        },
+                    ],
                 },
             },
         };
