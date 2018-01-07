@@ -501,26 +501,32 @@ server.get(
     '/:game/services',
     ( request, response ) => {
         const query = {
-            attributes: [
-                'service',
-            ],
+            attributes: [],
             include: [
                 {
-                    attributes: [],
+                    attributes: [
+                        'service',
+                    ],
                     include: [
                         {
                             attributes: [],
-                            model: models.Game,
-                            where: {
-                                identifier: request.params.game,
-                            },
+                            include: [
+                                {
+                                    attributes: [],
+                                    model: models.Game,
+                                    where: {
+                                        identifier: request.params.game,
+                                    },
+                                },
+                            ],
+                            model: models.Developer,
+                            where: {},
                         },
                     ],
-                    model: models.Developer,
+                    model: models.Account,
                     where: {},
                 },
             ],
-            model: models.Account,
             where: {},
         };
 
@@ -528,12 +534,12 @@ server.get(
             maxAge: CACHE_TIMES.services,
         } );
 
-        models.Account.findAll( query )
+        models.Post.findAll( query )
             .then( ( serviceObjects ) => {
                 const services = [];
 
                 serviceObjects.forEach( ( currentObject ) => {
-                    services.push( currentObject.service );
+                    services.push( currentObject.account.service );
                 } );
 
                 response.json( {
