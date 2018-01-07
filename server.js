@@ -527,6 +527,7 @@ server.get(
                     where: {},
                 },
             ],
+            raw: true,
             where: {},
         };
 
@@ -539,13 +540,17 @@ server.get(
                 const services = [];
 
                 serviceObjects.forEach( ( currentObject ) => {
-                    services.push( currentObject.account.service );
+                    if ( services.includes( currentObject[ 'account.service' ] ) ) {
+                        return true;
+                    }
+
+                    services.push( currentObject[ 'account.service' ] );
                 } );
 
                 response.json( {
                     // eslint-disable-next-line id-blacklist
                     data: alphanumSort(
-                        [ ...new Set( services ) ],
+                        services,
                         {
                             insensitive: true,
                         }
