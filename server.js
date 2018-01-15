@@ -651,9 +651,20 @@ server.post(
                 if ( created ) {
                     console.log( `${ new Date() } - post added for ${ request.params.game }` );
                     // const post = postInstance.get();
+                } else {
+                    console.log( `Post with url ${ request.body.url } already exists` );
+
+                    // Special case for reddit posts (because this shouldn't happen)
+                    if ( request.body.url.includes( 'reddit.com' ) ) {
+                        response.send( EXISTING_RESOURCE_STATUS_CODE );
+
+                        return true;
+                    }
                 }
 
                 response.json( 'OK' );
+
+                return true;
             } )
             .catch( ( postCreateError ) => {
                 response.send( MALFORMED_REQUEST_STATUS_CODE );
