@@ -20,6 +20,7 @@ const MALFORMED_REQUEST_STATUS_CODE = 400;
 const NOT_FOUND_STATUS_CODE = 404;
 const EXISTING_RESOURCE_STATUS_CODE = 409;
 const ID_HASH_MIN_LENGTH = 8;
+const MAX_POST_LIMIT = 50;
 const CACHE_TIMES = {
     favicon: 2592000,
     groups: 3600,
@@ -178,7 +179,7 @@ server.get(
                     model: models.Account,
                 },
             ],
-            limit: 50,
+            limit: MAX_POST_LIMIT,
             order: [
                 [
                     'timestamp',
@@ -249,6 +250,22 @@ server.get(
                     },
                 }
             );
+        }
+
+        if ( request.query.limit ) {
+            const newLimit = Number( request.query.limit );
+
+            if ( newLimit > 0 ) {
+                query.limit = Math.min( newLimit, MAX_POST_LIMIT );
+            }
+        }
+
+        if ( request.query.offset ) {
+            const postOffset = Number( request.query.offset );
+
+            if ( postOffset > 0 ) {
+                query.offset = postOffset;
+            }
         }
 
         models.Post.findAll( query )
