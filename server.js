@@ -134,6 +134,10 @@ server.head( '/:game/posts', ( request, response ) => {
     response.send( SUCCESS_STATUS_CODE );
 } );
 
+server.head( '/', ( request, response ) => {
+    response.send( SUCCESS_STATUS_CODE );
+} );
+
 server.get(
     '/:game/posts',
     ( request, response ) => {
