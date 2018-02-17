@@ -106,6 +106,11 @@ server.get( '/loaderio-7fa45b57bc0a2a51cd5159425752f4f2/', ( request, response )
     response.sendRaw( 'loaderio-7fa45b57bc0a2a51cd5159425752f4f2' );
 } );
 
+server.head( '/:game/posts', ( request, response ) => {
+    // Should add game checking
+    response.send( SUCCESS_STATUS_CODE );
+} );
+
 server.get(
     '/:game/posts',
     ( request, response ) => {
