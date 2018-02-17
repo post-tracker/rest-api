@@ -37,34 +37,46 @@ const server = restify.createServer( {
     name: 'Post tracker REST API',
 } );
 
+const authenticate = function authenticate ( routePath, method, token ) {
+    return new Promise( ( resolve, reject ) => {
+        jsonfile.readFile( path.join( __dirname, 'config/tokens.json' ), ( readError, tokenData ) => {
+            if ( readError ) {
+                return reject( readError );
+            }
+
+            if ( !tokenData[ token ] ) {
+                return resolve( false );
+            }
+
+            if ( !tokenData[ token ].paths[ routePath ] ) {
+                console.log( `${ token } not authenticated for ${ routePath }` );
+
+                return resolve( false );
+            }
+
+            if ( !tokenData[ token ].paths[ routePath ].includes( method ) ) {
+                console.log( `${ token } not authenticated for ${ method } on ${ routePath }` );
+
+                return resolve( false );
+            }
+
+            return resolve( true );
+        } );
+    } );
+};
+
 passport.use( new Strategy(
     {
         passReqToCallback: true,
     },
     ( request, token, authenticationCallback ) => {
-        jsonfile.readFile( path.join( __dirname, 'config/tokens.json' ), ( readError, tokenData ) => {
-            if ( readError ) {
-                return authenticationCallback( readError );
-            }
-
-            if ( !tokenData[ token ] ) {
-                return authenticationCallback( null, false );
-            }
-
-            if ( !tokenData[ token ].paths[ request.route.path ] ) {
-                console.log( `${ token } not authenticated for ${ request.route.path }` );
-
-                return authenticationCallback( null, false );
-            }
-
-            if ( !tokenData[ token ].paths[ request.route.path ].includes( request.method ) ) {
-                console.log( `${ token } not authenticated for ${ request.method } on ${ request.route.path }` );
-
-                return authenticationCallback( null, false );
-            }
-
-            return authenticationCallback( null, true );
-        } );
+        authenticate( request.route.path, request.method, token )
+            .then( ( authenticationResult ) => {
+                return authenticationCallback( null, authenticationResult );
+            } )
+            .catch( ( authenticationFailure ) => {
+                return authenticationCallback( authenticationFailure );
+            } );
     }
 ) );
 
