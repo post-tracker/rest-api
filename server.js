@@ -21,6 +21,7 @@ const NOT_FOUND_STATUS_CODE = 404;
 const EXISTING_RESOURCE_STATUS_CODE = 409;
 const ID_HASH_MIN_LENGTH = 8;
 const CACHE_TIMES = {
+    favicon: 2592000,
     groups: 3600,
     posts: 60,
     services: 3600,
@@ -108,6 +109,24 @@ server.get( '/loaderio-7fa45b57bc0a2a51cd5159425752f4f2/', ( request, response )
 
 server.get( '/robots.txt', ( request, response ) => {
     response.sendRaw( 'User-agent: *\r\nAllow: /' );
+} );
+
+server.get( '/favicon.ico', ( request, response ) => {
+    fs.readFile( path.join( __dirname, 'favicon.ico' ), ( readError, fileData ) => {
+        if ( readError ) {
+            console.error( readError );
+            response.send( INTERNAL_SERVER_ERROR_STATUS_CODE );
+
+            return true;
+        }
+
+        response.cache( 'public', {
+            maxAge: CACHE_TIMES.favicon,
+        } );
+        response.sendRaw( fileData );
+
+        return true;
+    } );
 } );
 
 server.head( '/:game/posts', ( request, response ) => {
