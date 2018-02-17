@@ -339,9 +339,6 @@ server.get(
 
 server.get(
     '/games',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
     ( request, response ) => {
         models.Game.findAll(
             {
@@ -355,11 +352,64 @@ server.get(
                 ],
             }
         )
-            .then( ( games ) => {
-                response.json( {
-                    // eslint-disable-next-line id-blacklist
-                    data: games,
-                } );
+            .then( ( fullGameData ) => {
+                const responseData = [];
+                let instantReponse = true;
+
+                for ( const game of fullGameData ) {
+                    const config = {};
+
+                    if ( game.config ) {
+                        if ( typeof game.config.live !== 'undefined' && !game.config.live ) {
+                            continue;
+                        }
+
+                        if ( game.config.boxart ) {
+                            config.boxart = game.config.boxart;
+                        }
+                    }
+
+                    responseData.push( {
+                        config,
+                        hostname: game.hostname,
+                        identifier: game.identifier,
+                        name: game.name,
+                        shortName: game.shortName,
+                    } );
+                }
+
+                if ( request.header( 'Authorization' ) ) {
+                    const tokenMatch = request.header( 'Authorization' ).match( /Bearer (.*)/ );
+
+                    if ( tokenMatch ) {
+                        instantReponse = false;
+
+                        authenticate( request.route.path, request.method, tokenMatch[ 1 ] )
+                            .then( ( isAuthed ) => {
+                                if ( isAuthed ) {
+                                    response.json( {
+                                        // eslint-disable-next-line id-blacklist
+                                        data: fullGameData,
+                                    } );
+                                } else {
+                                    response.json( {
+                                        // eslint-disable-next-line id-blacklist
+                                        data: responseData,
+                                    } );
+                                }
+                            } )
+                            .catch( ( authError ) => {
+                                console.log( authError );
+                            } );
+                    }
+                }
+
+                if ( instantReponse ) {
+                    response.json( {
+                        // eslint-disable-next-line id-blacklist
+                        data: responseData,
+                    } );
+                }
             } )
             .catch( ( queryError ) => {
                 console.log( queryError );
