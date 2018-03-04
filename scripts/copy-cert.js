@@ -30,7 +30,7 @@ const copyFile = function copyFile ( source, target, doneCallback ) {
     };
 };
 
-copyFile( '/etc/letsencrypt/live/api.kokarn.com/fullchain.pem', path.join( __dirname, '../assets/fullchain.pem' ), ( copyError ) => {
+copyFile( '/home/kokarn/letsencrypt/live/api.kokarn.com/fullchain.pem', path.join( __dirname, '../assets/fullchain.pem' ), ( copyError ) => {
     if ( copyError ) {
         throw copyError;
     }
@@ -38,7 +38,7 @@ copyFile( '/etc/letsencrypt/live/api.kokarn.com/fullchain.pem', path.join( __dir
     console.log( 'cert.pem copied successfully' );
 } );
 
-copyFile( '/etc/letsencrypt/live/api.kokarn.com/privkey.pem', path.join( __dirname, '../assets/privkey.pem' ), ( copyError ) => {
+copyFile( '/home/kokarn/letsencrypt/live/api.kokarn.com/privkey.pem', path.join( __dirname, '../assets/privkey.pem' ), ( copyError ) => {
     if ( copyError ) {
         throw copyError;
     }
