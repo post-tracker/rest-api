@@ -1100,8 +1100,15 @@ server.head(
 
 // eslint-disable-next-line max-params
 server.on( 'restifyError', ( request, response, error ) => {
-    console.error( `uncaughtException for ${ error }` );
-    response.send( INTERNAL_SERVER_ERROR_STATUS_CODE );
+    switch ( error.body.code ) {
+        case 'ResourceNotFound':
+            response.send( NOT_FOUND_STATUS_CODE );
+            break;
+        default:
+            console.error( `uncaughtException for ${ error }` );
+            response.send( INTERNAL_SERVER_ERROR_STATUS_CODE );
+            break;
+    }
 } );
 
 server.listen( LISTEN_PORT, () => {
