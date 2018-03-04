@@ -100,34 +100,18 @@ server.use( restify.plugins.queryParser() );
 server.use( restify.plugins.gzipResponse() );
 server.use( addHeader );
 
+// Anything with a dot basically
+server.get( /\/.*\..+?/, restify.plugins.serveStatic( {
+    default: 'index.json',
+    directory: './static',
+} ) );
+
 server.get( '/', ( request, response ) => {
     response.json( 'Wanna do cool stuff? Msg me wherever /u/Kokarn kokarn@gmail @oskarrisberg' );
 } );
 
 server.get( '/loaderio-7fa45b57bc0a2a51cd5159425752f4f2/', ( request, response ) => {
     response.sendRaw( 'loaderio-7fa45b57bc0a2a51cd5159425752f4f2' );
-} );
-
-server.get( '/robots.txt', ( request, response ) => {
-    response.sendRaw( 'User-agent: *\r\nAllow: /' );
-} );
-
-server.get( '/favicon.ico', ( request, response ) => {
-    fs.readFile( path.join( __dirname, 'favicon.ico' ), ( readError, fileData ) => {
-        if ( readError ) {
-            console.error( readError );
-            response.send( INTERNAL_SERVER_ERROR_STATUS_CODE );
-
-            return true;
-        }
-
-        response.cache( 'public', {
-            maxAge: CACHE_TIMES.favicon,
-        } );
-        response.sendRaw( fileData );
-
-        return true;
-    } );
 } );
 
 server.head( '/:game/posts', ( request, response ) => {
