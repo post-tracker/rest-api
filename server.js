@@ -488,6 +488,18 @@ server.get(
             query.include[ 0 ].where.active = active;
         }
 
+        if ( request.query.excludeService ) {
+            query.where = Object.assign(
+                {},
+                query.where,
+                {
+                    '$account.service$': {
+                        $notIn: [ request.query.excludeService ],
+                    },
+                }
+            );
+        }
+
         models.Account.findAll( query )
             .then( ( accounts ) => {
                 response.json( {
