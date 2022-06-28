@@ -1,5 +1,4 @@
 const path = require( 'path' );
-const fs = require( 'fs' );
 
 require('dotenv').config();
 
@@ -35,9 +34,9 @@ const hashids = new Hashids( '', ID_HASH_MIN_LENGTH, 'abcdefghijklmnopqrstuvwxyz
 
 const server = restify.createServer( {
     // eslint-disable-next-line no-sync
-    certificate: fs.readFileSync( path.join( __dirname, './assets/fullchain.pem' ) ),
+    // certificate: fs.readFileSync( path.join( __dirname, './assets/fullchain.pem' ) ),
     // eslint-disable-next-line no-sync
-    key: fs.readFileSync( path.join( __dirname, './assets/privkey.pem' ) ),
+    // key: fs.readFileSync( path.join( __dirname, './assets/privkey.pem' ) ),
     name: 'Post tracker REST API',
 } );
 
