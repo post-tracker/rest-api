@@ -34,7 +34,7 @@
     "npm-watch": "^0.3.0"
   },
   "engines": {
-    "node": "^18.4.0"
+    "node": "^18.3.0"
   },
   "eslintConfig": {
     "extends": "kokarn/nodejs"
