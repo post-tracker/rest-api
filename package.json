@@ -17,6 +17,7 @@
   "license": "ISC",
   "dependencies": {
     "alphanum-sort": "^1.0.2",
+    "dotenv": "^16.0.1",
     "hashids": "^1.1.4",
     "jsonfile": "^4.0.0",
     "mysql2": "^1.5.3",

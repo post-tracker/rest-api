@@ -1,0 +1,32 @@
+{
+    "development": {
+        "database": "devtracker",
+        "dialect": "mysql",
+        "logging": false,
+        "dialectOptions": {
+            "charset": "utf8mb4"
+        },
+        "pool": {
+            "max": 5,
+            "min": 0,
+            "idle": 10000
+        }
+    },
+    "test": {
+        "host": "127.0.0.1",
+        "dialect": "mysql"
+    },
+    "production": {
+        "database": "devtracker",
+        "dialect": "mysql",
+        "logging": false,
+        "dialectOptions": {
+            "charset": "utf8mb4"
+        },
+        "pool": {
+            "max": 50,
+            "min": 0,
+            "idle": 10000
+        }
+    }
+}

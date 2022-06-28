@@ -1,6 +1,8 @@
 const path = require( 'path' );
 const fs = require( 'fs' );
 
+require('dotenv').config();
+
 const sha1 = require( 'sha1' );
 const restify = require( 'restify' );
 const jsonfile = require( 'jsonfile' );
