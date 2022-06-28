@@ -19,7 +19,7 @@
     "alphanum-sort": "^1.0.2",
     "hashids": "^1.1.4",
     "jsonfile": "^4.0.0",
-    "mysql2": "^1.5.1",
+    "mysql2": "^1.5.3",
     "passport": "^0.4.0",
     "passport-http-bearer": "^1.0.1",
     "restify": "^6.3.4",
@@ -33,7 +33,7 @@
     "npm-watch": "^0.3.0"
   },
   "engines": {
-    "node": "^6.9.4"
+    "node": "^18.4.0"
   },
   "eslintConfig": {
     "extends": "kokarn/nodejs"
