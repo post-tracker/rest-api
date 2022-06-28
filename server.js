@@ -14,7 +14,7 @@ const corsMiddleware = require( 'restify-cors-middleware' );
 
 const models = require( './models' );
 
-const LISTEN_PORT = 3000;
+const LISTEN_PORT = process.env.LISTEN_PORT || 3000;
 const JSON_INDENTATION = 4;
 const SUCCESS_STATUS_CODE = 200;
 const INTERNAL_SERVER_ERROR_STATUS_CODE = 500;
