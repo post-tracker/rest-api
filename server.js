@@ -22,6 +22,7 @@ const NOT_FOUND_STATUS_CODE = 404;
 const EXISTING_RESOURCE_STATUS_CODE = 409;
 const ID_HASH_MIN_LENGTH = 8;
 const MAX_POST_LIMIT = 1000;
+const DEFAULT_POST_LIMIT = 50;
 const CACHE_TIMES = {
     favicon: 2592000,
     groups: 3600,
@@ -164,7 +165,7 @@ server.get(
                     model: models.Account,
                 },
             ],
-            limit: MAX_POST_LIMIT,
+            limit: DEFAULT_POST_LIMIT,
             order: [
                 [
                     'timestamp',
