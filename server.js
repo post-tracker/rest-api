@@ -26,6 +26,7 @@ const CACHE_TIMES = {
     posts: 60,
     services: 3600,
     singlePost: 2592000,
+    singlePostHead: 600,
 };
 
 const hashids = new Hashids( '', ID_HASH_MIN_LENGTH, 'abcdefghijklmnopqrstuvwxyz' );
@@ -1087,15 +1088,17 @@ server.head(
             },
         };
 
-        response.cache( 'public', {
-            maxAge: CACHE_TIMES.singlePost,
-        } );
-
         models.Post.count( query )
             .then( ( postCount ) => {
                 if ( postCount ) {
+                    response.cache( 'public', {
+                        maxAge: CACHE_TIMES.singlePost,
+                    } );
                     response.send( SUCCESS_STATUS_CODE );
                 } else {
+                    response.cache( 'public', {
+                        maxAge: CACHE_TIMES.singlePostHead,
+                    } );
                     response.send( NOT_FOUND_STATUS_CODE );
                 }
             } )
