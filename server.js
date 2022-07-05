@@ -96,6 +96,8 @@ server.use( restify.plugins.queryParser() );
 server.use( restify.plugins.gzipResponse() );
 server.use( addHeader );
 
+const postsCache = [];
+
 // Anything with a dot basically
 server.get( /\/.*\..+?/, restify.plugins.serveStatic( {
     default: 'index.json',
@@ -1088,17 +1090,25 @@ server.head(
             },
         };
 
+        if(postsCache.includes(request.params.hash)){
+            return response.send( SUCCESS_STATUS_CODE );
+        }
+
         models.Post.count( query )
             .then( ( postCount ) => {
                 if ( postCount ) {
+                    postsCache.push(request.params.hash);
+
                     response.cache( 'public', {
                         maxAge: CACHE_TIMES.singlePost,
                     } );
+
                     response.send( SUCCESS_STATUS_CODE );
                 } else {
                     response.cache( 'public', {
                         maxAge: CACHE_TIMES.singlePostHead,
                     } );
+
                     response.send( NOT_FOUND_STATUS_CODE );
                 }
             } )
