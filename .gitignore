@@ -3,3 +3,4 @@ ubuntu-xenial-16.04-cloudimg-console.log
 .vagrant/
 node_modules/
 .env
+tokens.json

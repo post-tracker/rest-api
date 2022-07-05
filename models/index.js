@@ -4,7 +4,7 @@ const Sequelize = require( 'sequelize' );
 
 // eslint-disable-next-line no-process-env
 const env = process.env.NODE_ENV || 'development';
-const config = require( path.join( __dirname, '/../config/config.json' ) )[ env ];
+const config = require( path.join( __dirname, '/../config.json' ) )[ env ];
 const models = {};
 // config.benchmark = true;
 // config.logging = (sql, time /*ms*/) => {

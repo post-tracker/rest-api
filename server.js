@@ -1,10 +1,7 @@
-const path = require( 'path' );
-
 require('dotenv').config();
 
 const sha1 = require( 'sha1' );
 const restify = require( 'restify' );
-const jsonfile = require( 'jsonfile' );
 const passport = require( 'passport' );
 const alphanumSort = require( 'alphanum-sort' );
 const Hashids = require( 'hashids' );
@@ -41,31 +38,27 @@ const server = restify.createServer( {
     name: 'Post tracker REST API',
 } );
 
+const tokenData = JSON.parse(process.env.API_TOKENS);
+
 const authenticate = function authenticate ( routePath, method, token ) {
     return new Promise( ( resolve, reject ) => {
-        jsonfile.readFile( path.join( __dirname, 'config/tokens.json' ), ( readError, tokenData ) => {
-            if ( readError ) {
-                return reject( readError );
-            }
+        if ( !tokenData[ token ] ) {
+            return resolve( false );
+        }
 
-            if ( !tokenData[ token ] ) {
-                return resolve( false );
-            }
+        if ( !tokenData[ token ].paths[ routePath ] ) {
+            console.log( `${ token } not authenticated for ${ routePath }` );
 
-            if ( !tokenData[ token ].paths[ routePath ] ) {
-                console.log( `${ token } not authenticated for ${ routePath }` );
+            return resolve( false );
+        }
 
-                return resolve( false );
-            }
+        if ( !tokenData[ token ].paths[ routePath ].includes( method ) ) {
+            console.log( `${ token } not authenticated for ${ method } on ${ routePath }` );
 
-            if ( !tokenData[ token ].paths[ routePath ].includes( method ) ) {
-                console.log( `${ token } not authenticated for ${ method } on ${ routePath }` );
+            return resolve( false );
+        }
 
-                return resolve( false );
-            }
-
-            return resolve( true );
-        } );
+        return resolve( true );
     } );
 };
 
