@@ -17,7 +17,7 @@
     "hashids": "^1.1.4",
     "mysql2": "^1.5.3",
     "nodemon": "^2.0.18",
-    "passport": "^0.4.0",
+    "passport": "^0.6.0",
     "passport-http-bearer": "^1.0.1",
     "restify": "^6.3.4",
     "restify-cors-middleware": "^1.1.0",

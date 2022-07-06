@@ -42,25 +42,23 @@ const server = restify.createServer( {
 const tokenData = JSON.parse(process.env.API_TOKENS);
 
 const authenticate = function authenticate ( routePath, method, token ) {
-    return new Promise( ( resolve, reject ) => {
-        if ( !tokenData[ token ] ) {
-            return resolve( false );
-        }
+    if ( !tokenData[ token ] ) {
+        return false;
+    }
 
-        if ( !tokenData[ token ].paths[ routePath ] ) {
-            console.log( `${ token } not authenticated for ${ routePath }` );
+    if ( !tokenData[ token ].paths[ routePath ] ) {
+        console.log( `${ token } not authenticated for ${ routePath }` );
 
-            return resolve( false );
-        }
+        return false;
+    }
 
-        if ( !tokenData[ token ].paths[ routePath ].includes( method ) ) {
-            console.log( `${ token } not authenticated for ${ method } on ${ routePath }` );
+    if ( !tokenData[ token ].paths[ routePath ].includes( method ) ) {
+        console.log( `${ token } not authenticated for ${ method } on ${ routePath }` );
 
-            return resolve( false );
-        }
+        return false;
+    }
 
-        return resolve( true );
-    } );
+    return true;
 };
 
 passport.use( new Strategy(
@@ -68,13 +66,9 @@ passport.use( new Strategy(
         passReqToCallback: true,
     },
     ( request, token, authenticationCallback ) => {
-        authenticate( request.route.path, request.method, token )
-            .then( ( authenticationResult ) => {
-                return authenticationCallback( null, authenticationResult );
-            } )
-            .catch( ( authenticationFailure ) => {
-                return authenticationCallback( authenticationFailure );
-            } );
+        const authenticationResult = authenticate( request.route.path, request.method, token );
+        
+        return authenticationCallback( null, authenticationResult );
     }
 ) );
 
@@ -415,23 +409,18 @@ server.get(
                     if ( tokenMatch ) {
                         instantReponse = false;
 
-                        authenticate( request.route.path, request.method, tokenMatch[ 1 ] )
-                            .then( ( isAuthed ) => {
-                                if ( isAuthed ) {
-                                    response.json( {
-                                        // eslint-disable-next-line id-blacklist
-                                        data: fullGameData,
-                                    } );
-                                } else {
-                                    response.json( {
-                                        // eslint-disable-next-line id-blacklist
-                                        data: responseData,
-                                    } );
-                                }
-                            } )
-                            .catch( ( authError ) => {
-                                console.log( authError );
+                        const isAuthed = authenticate( request.route.path, request.method, tokenMatch[ 1 ] )
+                        if ( isAuthed ) {
+                            response.json( {
+                                // eslint-disable-next-line id-blacklist
+                                data: fullGameData,
                             } );
+                        } else {
+                            response.json( {
+                                // eslint-disable-next-line id-blacklist
+                                data: responseData,
+                            } );
+                        }
                     }
                 }
 
@@ -767,7 +756,8 @@ server.post(
                     }
                 }
 
-                response.json( 'OK' );
+                response.status(SUCCESS_STATUS_CODE);
+                response.end();
 
                 return true;
             } )
@@ -807,7 +797,8 @@ server.post(
 
                 if ( created ) {
                     console.log( `${ new Date() } - account added` );
-                    response.json( 'OK' );
+                    response.status(SUCCESS_STATUS_CODE);
+                    response.end();
                 } else {
                     response.send( EXISTING_RESOURCE_STATUS_CODE );
                 }
@@ -850,7 +841,9 @@ server.post(
 
                 if ( created ) {
                     console.log( `${ new Date() } - developer added for ${ request.params.game }` );
-                    response.json( 'OK' );
+
+                    response.status(SUCCESS_STATUS_CODE);
+                    response.end();
                 } else {
                     response.send( EXISTING_RESOURCE_STATUS_CODE );
                 }
@@ -896,7 +889,8 @@ server.post(
                     console.log( `Game with identifier ${ request.body.identifier } already exists` );
                 }
 
-                response.json( 'OK' );
+                response.status(SUCCESS_STATUS_CODE);
+                response.end();
             } )
             .catch( ( gameCreateError ) => {
                 response.send( MALFORMED_REQUEST_STATUS_CODE );
@@ -926,7 +920,9 @@ server.patch(
             .then( ( result ) => {
                 if ( result[ 0 ] > 0 ) {
                     console.log( `${ new Date() } - ${ request.params.identifier } updated` );
-                    response.json( 'OK' );
+
+                    response.status(SUCCESS_STATUS_CODE);
+                    response.end();
                 } else {
                     // console.log( result );
                     response.send( NOT_FOUND_STATUS_CODE );
@@ -962,7 +958,8 @@ server.patch(
                     console.log( `${ new Date() } - ${ result[ 0 ] } developers updated` );
                 }
 
-                response.json( 'OK' );
+                response.status(SUCCESS_STATUS_CODE);
+                response.end();
             } )
             .catch( ( developerCreateError ) => {
                 response.send( MALFORMED_REQUEST_STATUS_CODE );
@@ -994,7 +991,8 @@ server.patch(
                     console.log( `${ new Date() } - ${ result[ 0 ] } accounts updated` );
                 }
 
-                response.json( 'OK' );
+                response.status(SUCCESS_STATUS_CODE);
+                response.end();
             } )
             .catch( ( developerCreateError ) => {
                 response.send( MALFORMED_REQUEST_STATUS_CODE );
@@ -1029,7 +1027,8 @@ server.del(
                     console.log( `${ deletedCount } accounts deleted` );
                 }
 
-                response.json( 'OK' );
+                response.status(SUCCESS_STATUS_CODE);
+                response.end();
             } )
             .catch( ( accountDeleteError ) => {
                 response.send( MALFORMED_REQUEST_STATUS_CODE );
@@ -1064,7 +1063,8 @@ server.del(
                         console.log( `${ deletedCount } posts deleted` );
                     }
 
-                    response.json( 'OK' );
+                    response.status(SUCCESS_STATUS_CODE);
+                    response.end();
                 } else {
                     response.send( NOT_FOUND_STATUS_CODE );
                 }
@@ -1120,15 +1120,16 @@ server.head(
 
 // eslint-disable-next-line max-params
 server.on( 'restifyError', ( request, response, error ) => {
-    switch ( error.body.code ) {
-        case 'ResourceNotFound':
-            response.send( NOT_FOUND_STATUS_CODE );
-            break;
-        default:
-            console.error( `uncaughtException for ${ error }` );
-            response.send( INTERNAL_SERVER_ERROR_STATUS_CODE );
-            break;
-    }
+    console.log(error);
+    // switch ( error.body.code ) {
+    //     case 'ResourceNotFound':
+    //         response.send( NOT_FOUND_STATUS_CODE );
+    //         break;
+    //     default:
+    //         console.error( `uncaughtException for ${ error }` );
+    //         response.send( INTERNAL_SERVER_ERROR_STATUS_CODE );
+    //         break;
+    // }
 } );
 
 server.listen( LISTEN_PORT, () => {
