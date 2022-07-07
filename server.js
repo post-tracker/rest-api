@@ -108,11 +108,13 @@ server.get( '/loaderio-7fa45b57bc0a2a51cd5159425752f4f2/', ( request, response )
 
 server.head( '/:game/posts', ( request, response ) => {
     // Should add game checking
-    response.send( SUCCESS_STATUS_CODE );
+    response.status( SUCCESS_STATUS_CODE );
+    response.end();
 } );
 
 server.head( '/', ( request, response ) => {
-    response.send( SUCCESS_STATUS_CODE );
+    response.status( SUCCESS_STATUS_CODE );
+    response.end();
 } );
 
 server.get(
@@ -353,7 +355,8 @@ server.get(
                         data: [ post ],
                     } );
                 } else {
-                    response.send( NOT_FOUND_STATUS_CODE );
+                    response.status( NOT_FOUND_STATUS_CODE );
+                    response.end();
                 }
             } )
             .catch( ( findError ) => {
@@ -763,7 +766,9 @@ server.post(
                 return true;
             } )
             .catch( ( postCreateError ) => {
-                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                response.status( MALFORMED_REQUEST_STATUS_CODE );
+                response.end();
+                
                 if ( postCreateError.fields ) {
                     console.log( `${ postCreateError.name }\n${ JSON.stringify( postCreateError.fields, null, JSON_INDENTATION ) }` );
                 } else {
@@ -801,11 +806,14 @@ server.post(
                     response.status(SUCCESS_STATUS_CODE);
                     response.end();
                 } else {
-                    response.send( EXISTING_RESOURCE_STATUS_CODE );
+                    response.status( EXISTING_RESOURCE_STATUS_CODE );
+                    response.end();
                 }
             } )
             .catch( ( accountCreateError ) => {
-                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                response.status( MALFORMED_REQUEST_STATUS_CODE );
+                response.end();
+
                 if ( accountCreateError.fields ) {
                     console.log( `${ accountCreateError.name }\n${ JSON.stringify( accountCreateError.fields, null, JSON_INDENTATION ) }` );
                 } else {
@@ -846,11 +854,14 @@ server.post(
                     response.status(SUCCESS_STATUS_CODE);
                     response.end();
                 } else {
-                    response.send( EXISTING_RESOURCE_STATUS_CODE );
+                    response.status( EXISTING_RESOURCE_STATUS_CODE );
+                    response.end();
                 }
             } )
             .catch( ( developerCreateError ) => {
-                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                response.status( MALFORMED_REQUEST_STATUS_CODE );
+                response.end();
+
                 if ( developerCreateError.fields ) {
                     console.log( `${ developerCreateError.name }\n${ JSON.stringify( developerCreateError.fields, null, JSON_INDENTATION ) }` );
                 } else {
@@ -894,7 +905,9 @@ server.post(
                 response.end();
             } )
             .catch( ( gameCreateError ) => {
-                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                response.status( MALFORMED_REQUEST_STATUS_CODE );
+                response.end();
+
                 if ( gameCreateError.fields ) {
                     console.log( `${ gameCreateError.name }\n${ JSON.stringify( gameCreateError.fields, null, JSON_INDENTATION ) }` );
                 } else {
@@ -926,11 +939,14 @@ server.patch(
                     response.end();
                 } else {
                     // console.log( result );
-                    response.send( NOT_FOUND_STATUS_CODE );
+                    response.status( NOT_FOUND_STATUS_CODE );
+                    response.end();
                 }
             } )
             .catch( ( gameUpdateError ) => {
-                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                response.status( MALFORMED_REQUEST_STATUS_CODE );
+                response.end();
+
                 if ( gameUpdateError.fields ) {
                     console.log( `${ gameUpdateError.name }\n${ JSON.stringify( gameUpdateError.fields, null, JSON_INDENTATION ) }` );
                 } else {
@@ -963,7 +979,9 @@ server.patch(
                 response.end();
             } )
             .catch( ( developerCreateError ) => {
-                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                response.status( MALFORMED_REQUEST_STATUS_CODE );
+                response.end();
+
                 if ( developerCreateError.fields ) {
                     console.log( `${ developerCreateError.name }\n${ JSON.stringify( developerCreateError.fields, null, JSON_INDENTATION ) }` );
                 } else {
@@ -996,7 +1014,9 @@ server.patch(
                 response.end();
             } )
             .catch( ( developerCreateError ) => {
-                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                response.status( MALFORMED_REQUEST_STATUS_CODE );
+                response.end();
+
                 if ( developerCreateError.fields ) {
                     console.log( `${ developerCreateError.name }\n${ JSON.stringify( developerCreateError.fields, null, JSON_INDENTATION ) }` );
                 } else {
@@ -1032,7 +1052,8 @@ server.del(
                 response.end();
             } )
             .catch( ( accountDeleteError ) => {
-                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                response.status( MALFORMED_REQUEST_STATUS_CODE );
+                response.end();
 
                 if ( accountDeleteError.fields ) {
                     console.log( `${ accountDeleteError.name }\n${ JSON.stringify( accountDeleteError.fields, null, JSON_INDENTATION ) }` );
@@ -1067,11 +1088,13 @@ server.del(
                     response.status(SUCCESS_STATUS_CODE);
                     response.end();
                 } else {
-                    response.send( NOT_FOUND_STATUS_CODE );
+                    response.status( NOT_FOUND_STATUS_CODE );
+                    response.end();
                 }
             } )
             .catch( ( postDeleteError ) => {
-                response.send( MALFORMED_REQUEST_STATUS_CODE );
+                response.status( MALFORMED_REQUEST_STATUS_CODE );
+                response.end();
 
                 if ( postDeleteError.fields ) {
                     console.log( `${ postDeleteError.name }\n${ JSON.stringify( postDeleteError.fields, null, JSON_INDENTATION ) }` );
@@ -1092,7 +1115,10 @@ server.head(
         };
 
         if(postsCache.includes(request.params.hash)){
-            return response.send( SUCCESS_STATUS_CODE );
+            response.status( SUCCESS_STATUS_CODE );
+            response.end();
+
+            return true;
         }
 
         models.Post.count( query )
@@ -1104,13 +1130,15 @@ server.head(
                         maxAge: CACHE_TIMES.singlePost,
                     } );
 
-                    response.send( SUCCESS_STATUS_CODE );
+                    response.status( SUCCESS_STATUS_CODE );
+                    response.end();
                 } else {
                     response.cache( 'public', {
                         maxAge: CACHE_TIMES.singlePostHead,
                     } );
 
-                    response.send( NOT_FOUND_STATUS_CODE );
+                    response.status( NOT_FOUND_STATUS_CODE );
+                    response.end();
                 }
             } )
             .catch( ( findError ) => {
@@ -1124,11 +1152,13 @@ server.on( 'restifyError', ( request, response, error ) => {
     console.log(error);
     // switch ( error.body.code ) {
     //     case 'ResourceNotFound':
-    //         response.send( NOT_FOUND_STATUS_CODE );
+    //         response.status( NOT_FOUND_STATUS_CODE );
+    //         response.end();
     //         break;
     //     default:
     //         console.error( `uncaughtException for ${ error }` );
-    //         response.send( INTERNAL_SERVER_ERROR_STATUS_CODE );
+    //         response.status( INTERNAL_SERVER_ERROR_STATUS_CODE );
+    //         response.end();
     //         break;
     // }
 } );
