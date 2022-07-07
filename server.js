@@ -750,7 +750,8 @@ server.post(
 
                     // Special case for reddit posts (because this shouldn't happen)
                     if ( request.body.url.includes( 'reddit.com' ) ) {
-                        response.send( EXISTING_RESOURCE_STATUS_CODE );
+                        response.status( EXISTING_RESOURCE_STATUS_CODE );
+                        response.end();
 
                         return true;
                     }
