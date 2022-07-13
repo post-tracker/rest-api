@@ -7,6 +7,7 @@ const alphanumSort = require( 'alphanum-sort' );
 const Hashids = require( 'hashids' );
 const Strategy = require( 'passport-http-bearer' ).Strategy;
 const corsMiddleware = require( 'restify-cors-middleware' );
+const { Op } = require('sequelize');
 
 const models = require( './models' );
 
@@ -91,6 +92,62 @@ server.use( restify.plugins.gzipResponse() );
 server.use( addHeader );
 
 const postsCache = [];
+let accounts = [];
+
+const getAllAccounts = async () => {
+    const query = {
+        attributes: [
+            'id',
+            'identifier',
+            'service',
+        ],
+        include: [
+            {
+                attributes: [
+                    'group',
+                    'name',
+                    'nick',
+                    'role',
+                ],
+                include: [
+                    {
+                        attributes: [
+                            'identifier',
+                        ],
+                        model: models.Game,
+                    },
+                ],
+                model: models.Developer,
+            },
+        ],
+    };
+
+    await models.Account.findAll( query )
+        .then( ( accountInstances ) => {
+            const newAccounts = [];
+            for ( let i = 0; i < accountInstances.length; i = i + 1 ) {
+                const account = accountInstances[ i ].get();
+
+                newAccounts.push(account);
+            }
+
+            accounts = newAccounts;
+        } )
+        .catch( ( findError ) => {
+            throw findError;
+        } );
+};
+
+getAllAccounts();
+setInterval(getAllAccounts, 60000);
+
+const getAccountsForGame = async (gameIdentifier) => {
+    const gameAccounts = accounts.filter((account) => {
+        return account.developer.game.identifier === gameIdentifier;
+    });
+
+    return gameAccounts;
+};
 
 // Anything with a dot basically
 server.get( /\/.*\..+?/, restify.plugins.serveStatic( {
@@ -119,44 +176,21 @@ server.head( '/', ( request, response ) => {
 
 server.get(
     '/:game/posts',
-    ( request, response ) => {
+    async ( request, response ) => {
+        const gameAccounts = await getAccountsForGame(request.params.game);
         const query = {
             attributes: [
-                'content',
                 'id',
-                'section',
                 'timestamp',
-                'topic',
-                'topicUrl',
-                'url',
-                'urlHash',
+                'accountId',
             ],
-            include: [
-                {
-                    attributes: [
-                        'identifier',
-                        'service',
-                    ],
-                    include: [
-                        {
-                            attributes: [
-                                'group',
-                                'name',
-                                'nick',
-                                'role',
-                            ],
-                            include: [
-                                {
-                                    attributes: [],
-                                    model: models.Game,
-                                },
-                            ],
-                            model: models.Developer,
+            where: {
+                accountId: {
+                    [Op.in]: gameAccounts.map((gameAccount) => {
+                        return gameAccount.id;
+                    }),
                         },
-                    ],
-                    model: models.Account,
                 },
-            ],
             limit: DEFAULT_POST_LIMIT,
             order: [
                 [
@@ -164,9 +198,6 @@ server.get(
                     'DESC',
                 ],
             ],
-            where: {
-                '$account.developer.game.identifier$': request.params.game,
-            },
         };
 
         response.cache( 'public', {
@@ -248,8 +279,68 @@ server.get(
 
         models.Post.findAll( query )
             .then( ( postInstances ) => {
-                const posts = [];
+                const postIdList = [];
 
+                for ( let i = 0; i < postInstances.length; i = i + 1 ) {
+                    const post = postInstances[ i ].get();
+                    postIdList.push(post.id);
+                }
+
+                const postQuery = {
+                    attributes: [
+                        'content',
+                        'id',
+                        'section',
+                        'timestamp',
+                        'topic',
+                        'topicUrl',
+                        'url',
+                        'urlHash',
+                    ],
+                    include: [
+                        {
+                            attributes: [
+                                'identifier',
+                                'service',
+                            ],
+                            include: [
+                                {
+                                    attributes: [
+                                        'group',
+                                        'name',
+                                        'nick',
+                                        'role',
+                                    ],
+                                    include: [
+                                        {
+                                            attributes: [],
+                                            model: models.Game,
+                                        },
+                                    ],
+                                    model: models.Developer,
+                                },
+                            ],
+                            model: models.Account,
+                        },
+                    ],
+                    limit: DEFAULT_POST_LIMIT,
+                    order: [
+                        [
+                            'timestamp',
+                            'DESC',
+                        ],
+                    ],
+                    where: {
+                        id: {
+                            [Op.in]: postIdList,
+                        }
+                    },
+                };
+
+                return models.Post.findAll(postQuery);
+            } )
+            .then( ( postInstances ) => {
+                const posts = [];
                 for ( let i = 0; i < postInstances.length; i = i + 1 ) {
                     const post = postInstances[ i ].get();
 
