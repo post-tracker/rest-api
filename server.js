@@ -155,12 +155,6 @@ server.get( /\/.*\..+?/, restify.plugins.serveStatic( {
     directory: './static',
 } ) );
 
-server.get( '/test', async ( request, response ) => {
-    const gameAccounts = await getAccountsForGame('dead-matter');
-    console.log(JSON.stringify(gameAccounts, null, 4));
-    response.json( 'Wanna do cool stuff? Msg me wherever /u/Kokarn kokarn@gmail @oskarrisberg' );
-} );
-
 server.get( '/', ( request, response ) => {
     response.json( 'Wanna do cool stuff? Msg me wherever /u/Kokarn kokarn@gmail @oskarrisberg' );
 } );
