@@ -155,6 +155,12 @@ server.get( /\/.*\..+?/, restify.plugins.serveStatic( {
     directory: './static',
 } ) );
 
+server.get( '/test', async ( request, response ) => {
+    const gameAccounts = await getAccountsForGame('dead-matter');
+    console.log(JSON.stringify(gameAccounts, null, 4));
+    response.json( 'Wanna do cool stuff? Msg me wherever /u/Kokarn kokarn@gmail @oskarrisberg' );
+} );
+
 server.get( '/', ( request, response ) => {
     response.json( 'Wanna do cool stuff? Msg me wherever /u/Kokarn kokarn@gmail @oskarrisberg' );
 } );
@@ -177,20 +183,14 @@ server.head( '/', ( request, response ) => {
 server.get(
     '/:game/posts',
     async ( request, response ) => {
-        const gameAccounts = await getAccountsForGame(request.params.game);
+        let gameAccounts = await getAccountsForGame(request.params.game);
         const query = {
             attributes: [
                 'id',
                 'timestamp',
                 'accountId',
             ],
-            where: {
-                accountId: {
-                    [Op.in]: gameAccounts.map((gameAccount) => {
-                        return gameAccount.id;
-                    }),
-                        },
-                },
+            where: {},
             limit: DEFAULT_POST_LIMIT,
             order: [
                 [
@@ -225,40 +225,24 @@ server.get(
             );
         }
 
+
+
         if ( request.query.services ) {
-            query.where = Object.assign(
-                {},
-                query.where,
-                {
-                    '$account.service$': {
-                        $in: request.query.services,
-                    },
-                }
-            );
+            gameAccounts = gameAccounts.filter((gameAccount) => {
+                return request.query.services.includes(gameAccount.service);
+            });
         }
 
         if ( request.query.groups ) {
-            query.where = Object.assign(
-                {},
-                query.where,
-                {
-                    '$account.developer.group$': {
-                        $in: request.query.groups,
-                    },
-                }
-            );
+            gameAccounts = gameAccounts.filter((gameAccount) => {
+                return request.query.groups.includes(gameAccount.developer.group);
+            });
         }
 
         if ( request.query.excludeService ) {
-            query.where = Object.assign(
-                {},
-                query.where,
-                {
-                    '$account.service$': {
-                        $notIn: [ request.query.excludeService ],
-                    },
-                }
-            );
+            gameAccounts = gameAccounts.filter((gameAccount) => {
+                return !request.query.excludeService.includes(gameAccount.service);
+            });
         }
 
         if ( request.query.limit ) {
@@ -276,6 +260,18 @@ server.get(
                 query.offset = postOffset;
             }
         }
+
+        query.where = Object.assign(
+            {},
+            query.where,
+            {
+                accountId: {
+                    [Op.in]: gameAccounts.map((gameAccount) => {
+                        return gameAccount.id;
+                    }),
+                },
+            }
+        )
 
         models.Post.findAll( query )
             .then( ( postInstances ) => {
