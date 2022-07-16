@@ -219,8 +219,6 @@ server.get(
             );
         }
 
-
-
         if ( request.query.services ) {
             gameAccounts = gameAccounts.filter((gameAccount) => {
                 return request.query.services.includes(gameAccount.service);
