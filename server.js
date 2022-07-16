@@ -209,11 +209,11 @@ server.get(
                                 $like: `%${ request.query.search }%`,
                             },
                         },
-                        {
-                            '$account.developer.nick$': {
-                                $like: `%${ request.query.search }%`,
-                            },
-                        },
+                        // {
+                        //     '$account.developer.nick$': {
+                        //         $like: `%${ request.query.search }%`,
+                        //     },
+                        // },
                     ],
                 }
             );
