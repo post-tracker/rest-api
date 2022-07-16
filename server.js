@@ -311,7 +311,6 @@ server.get(
                             model: models.Account,
                         },
                     ],
-                    limit: DEFAULT_POST_LIMIT,
                     order: [
                         [
                             'timestamp',
