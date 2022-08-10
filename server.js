@@ -92,7 +92,7 @@ server.use( restify.plugins.gzipResponse() );
 server.use( addHeader );
 
 const postsCache = [];
-let accounts = [];
+let allAccounts = [];
 
 const getAllAccounts = async () => {
     const query = {
@@ -108,6 +108,7 @@ const getAllAccounts = async () => {
                     'name',
                     'nick',
                     'role',
+                    'active',
                 ],
                 include: [
                     {
@@ -131,7 +132,7 @@ const getAllAccounts = async () => {
                 newAccounts.push(account);
             }
 
-            accounts = newAccounts;
+            allAccounts = newAccounts;
         } )
         .catch( ( findError ) => {
             throw findError;
@@ -142,7 +143,7 @@ getAllAccounts();
 setInterval(getAllAccounts, 60000);
 
 const getAccountsForGame = async (gameIdentifier) => {
-    const gameAccounts = accounts.filter((account) => {
+    const gameAccounts = allAccounts.filter((account) => {
         return account.developer.game.identifier === gameIdentifier;
     });
 
@@ -523,61 +524,30 @@ server.get(
     passport.authenticate( 'bearer', {
         session: false,
     } ),
-    ( request, response ) => {
-        const query = {
-            attributes: [
-                'id',
-                'identifier',
-                'service',
-            ],
-            include: [
-                {
-                    attributes: [],
-                    include: [
-                        {
-                            attributes: [],
-                            model: models.Game,
-                            where: {
-                                identifier: request.params.game,
-                            },
-                        },
-                    ],
-                    model: models.Developer,
-                    where: {},
-                },
-            ],
-            model: models.Account,
-            where: {},
-        };
+    async ( request, response ) => {
+        let gameAccounts = await getAccountsForGame(request.params.game);
 
         if ( request.query.active && request.query.active.length > 0 ) {
-            const active = Number( request.query.active );
-
-            query.include[ 0 ].where.active = active;
+            gameAccounts = gameAccounts.filter((gameAccount) => {
+                return gameAccount.developer.active;
+            });
         }
 
         if ( request.query.excludeService ) {
-            query.where = Object.assign(
-                {},
-                query.where,
-                {
-                    '$account.service$': {
-                        $notIn: [ request.query.excludeService ],
-                    },
-                }
-            );
+            gameAccounts = gameAccounts.filter((gameAccount) => {
+                return !request.query.excludeService.includes(gameAccount.service);
+            });
         }
 
-        models.Account.findAll( query )
-            .then( ( accounts ) => {
-                response.json( {
-                    // eslint-disable-next-line id-blacklist
-                    data: accounts,
-                } );
-            } )
-            .catch( ( queryError ) => {
-                console.log( queryError );
-            } );
+        response.json({
+            data: gameAccounts.map((gameAccount) => {
+                return {
+                    id: gameAccount.id,
+                    identifier: gameAccount.identifier,
+                    service: gameAccount.service,
+                };
+            }),
+        });
     }
 );
 
