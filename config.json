@@ -1,12 +1,12 @@
 {
     "development": {
-        "database": "developertracker",
+        "database": "devtracker",
         "dialect": "mysql",
         "logging": false,
         "dialectOptions": {
             "charset": "utf8mb4",
             "ssl": {
-                  "rejectUnauthorized": true
+                  "rejectUnauthorized": false
             }
         },
         "pool": {
@@ -20,13 +20,13 @@
         "dialect": "mysql"
     },
     "production": {
-        "database": "developertracker",
+        "database": "devtracker",
         "dialect": "mysql",
         "logging": false,
         "dialectOptions": {
             "charset": "utf8mb4",
             "ssl": {
-                "rejectUnauthorized": true
+                "rejectUnauthorized": false
           }
         },
         "pool": {

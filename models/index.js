@@ -13,7 +13,7 @@ const models = {};
 
 config.host = process.env.DB_HOST;
 
-const sequelize = new Sequelize( 'developertracker', process.env.DB_USERNAME, process.env.DB_PASSWORD, config );
+const sequelize = new Sequelize( 'devtracker', process.env.DB_USERNAME, process.env.DB_PASSWORD, config );
 
 models.Game = sequelize.define(
     'game',
