@@ -1,6 +1,6 @@
 {
     "development": {
-        "database": "devtracker",
+        "database": "developertracker",
         "dialect": "mysql",
         "logging": false,
         "dialectOptions": {
@@ -20,7 +20,7 @@
         "dialect": "mysql"
     },
     "production": {
-        "database": "devtracker",
+        "database": "developertracker",
         "dialect": "mysql",
         "logging": false,
         "dialectOptions": {
