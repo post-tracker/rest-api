@@ -395,7 +395,9 @@ server.get(
                     data: posts,
                 } );
 
+                if( posts.length > 0 ) {
                 myCache.set(cacheKey, JSON.stringify(posts), CACHE_TIMES.posts);
+                }
             } )
             .catch( ( findError ) => {
                 throw findError;
