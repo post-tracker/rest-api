@@ -16,6 +16,7 @@
     "dotenv": "^16.0.1",
     "hashids": "^1.1.4",
     "mysql2": "^1.5.3",
+    "node-cache": "^5.1.2",
     "nodemon": "^2.0.18",
     "passport": "^0.6.0",
     "passport-http-bearer": "^1.0.1",

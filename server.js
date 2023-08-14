@@ -8,6 +8,7 @@ const Hashids = require( 'hashids' );
 const Strategy = require( 'passport-http-bearer' ).Strategy;
 const corsMiddleware = require( 'restify-cors-middleware' );
 const { Op } = require('sequelize');
+const NodeCache = require('node-cache');
 
 const models = require( './models' );
 
@@ -24,7 +25,7 @@ const DEFAULT_POST_LIMIT = 50;
 const CACHE_TIMES = {
     favicon: 2592000,
     groups: 3600,
-    posts: 60,
+    posts: 600,
     services: 3600,
     singlePost: 2592000,
     singlePostHead: 600,
@@ -41,6 +42,8 @@ const server = restify.createServer( {
 } );
 
 const tokenData = JSON.parse(process.env.API_TOKENS);
+
+const myCache = new NodeCache();
 
 const authenticate = function authenticate ( routePath, method, token ) {
     if ( !tokenData[ token ] ) {
@@ -93,6 +96,38 @@ server.use( addHeader );
 
 const postsCache = [];
 let allAccounts = [];
+
+const getCacheKey = ( request ) => {
+    let cacheKey = request.params.game;
+
+    cacheKey = `${ cacheKey }/${ request.params.path }`;
+
+    if ( request.query.search ) {
+        cacheKey = `${ cacheKey }/${ request.query.search }`;
+    }
+
+    if ( request.query.services ) {
+        cacheKey = `${ cacheKey }/${ request.query.services.join(',') }`;
+    }
+
+    if ( request.query.groups ) {
+        cacheKey = `${ cacheKey }/${ request.query.groups.join(',') }`;
+    }
+
+    if ( request.query.excludeService ) {
+        cacheKey = `${ cacheKey }/${ request.query.excludeService.join(',') }`;
+    }
+
+    if ( request.query.limit ) {
+        cacheKey = `${ cacheKey }/${ request.query.limit }`;
+    }
+
+    if ( request.query.offset ) {
+        cacheKey = `${ cacheKey }/${ request.query.offset }`;
+    }
+
+    return cacheKey;
+};
 
 const getAllAccounts = async () => {
     const query = {
@@ -177,7 +212,22 @@ server.head( '/', ( request, response ) => {
 
 server.get(
     '/:game/posts',
-    async ( request, response ) => {
+    // eslint-disable-next-line max-lines-per-function
+    async (request, response) => {
+        const cacheKey = getCacheKey(request);
+        const cachedValue = myCache.get(cacheKey);
+
+        if (cachedValue) {
+            console.log('Cache hit!');
+
+            response.json({
+                // eslint-disable-next-line id-blacklist
+                data: JSON.parse(cachedValue),
+            });
+
+            return true;
+        }
+
         let gameAccounts = await getAccountsForGame(request.params.game);
         const query = {
             attributes: [
@@ -340,6 +390,8 @@ server.get(
                     // eslint-disable-next-line id-blacklist
                     data: posts,
                 } );
+
+                myCache.set(cacheKey, JSON.stringify(posts), CACHE_TIMES.posts);
             } )
             .catch( ( findError ) => {
                 throw findError;
