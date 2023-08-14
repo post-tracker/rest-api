@@ -115,7 +115,11 @@ const getCacheKey = ( request ) => {
     }
 
     if ( request.query.excludeService ) {
+        if( Array.isArray( request.query.excludeService ) ) {
         cacheKey = `${ cacheKey }/${ request.query.excludeService.join(',') }`;
+        } else {
+            cacheKey = `${ cacheKey }/${ request.query.excludeService }`;
+        }
     }
 
     if ( request.query.limit ) {
