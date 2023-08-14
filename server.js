@@ -72,7 +72,7 @@ passport.use( new Strategy(
     },
     ( request, token, authenticationCallback ) => {
         const authenticationResult = authenticate( request.route.path, request.method, token );
-        
+
         return authenticationCallback( null, authenticationResult );
     }
 ) );
@@ -119,7 +119,7 @@ const getCacheKey = ( request ) => {
 
     if ( request.query.excludeService ) {
         if( Array.isArray( request.query.excludeService ) ) {
-        cacheKey = `${ cacheKey }/${ request.query.excludeService.join(',') }`;
+            cacheKey = `${ cacheKey }/${ request.query.excludeService.join(',') }`;
         } else {
             cacheKey = `${ cacheKey }/${ request.query.excludeService }`;
         }
@@ -250,6 +250,7 @@ server.get(
                     'DESC',
                 ],
             ],
+            logging: console.log,
         };
 
         response.cache( 'public', {
@@ -321,7 +322,7 @@ server.get(
                     }),
                 },
             }
-        )
+        );
 
         models.Post.findAll( query )
             .then( ( postInstances ) => {
@@ -399,7 +400,7 @@ server.get(
                 } );
 
                 if( posts.length > 0 ) {
-                myCache.set(cacheKey, JSON.stringify(posts), CACHE_TIMES.posts);
+                    myCache.set(cacheKey, JSON.stringify(posts), CACHE_TIMES.posts);
                 }
             } )
             .catch( ( findError ) => {
@@ -877,7 +878,7 @@ server.post(
             .catch( ( postCreateError ) => {
                 response.status( MALFORMED_REQUEST_STATUS_CODE );
                 response.end();
-                
+
                 if ( postCreateError.fields ) {
                     console.log( `${ postCreateError.name }\n${ JSON.stringify( postCreateError.fields, null, JSON_INDENTATION ) }` );
                 } else {
