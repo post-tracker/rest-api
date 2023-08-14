@@ -11,6 +11,7 @@ const { Op } = require('sequelize');
 const NodeCache = require('node-cache');
 
 const models = require( './models' );
+const processor = require( './modules/processor.js' );
 
 const LISTEN_PORT = process.env.PORT || 3000;
 const JSON_INDENTATION = 4;
@@ -93,6 +94,8 @@ server.use( restify.plugins.bodyParser() );
 server.use( restify.plugins.queryParser() );
 server.use( restify.plugins.gzipResponse() );
 server.use( addHeader );
+
+processor();
 
 const postsCache = [];
 let allAccounts = [];
