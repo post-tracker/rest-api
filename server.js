@@ -26,7 +26,7 @@ const DEFAULT_POST_LIMIT = 50;
 const CACHE_TIMES = {
     favicon: 2592000,
     groups: 3600,
-    posts: 600,
+    posts: 1200,
     services: 3600,
     singlePost: 2592000,
     singlePostHead: 600,
