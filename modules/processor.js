@@ -12,7 +12,7 @@ const redditQueue = new Queue(
     {
         limiter: {
             max: 1,
-            duration: 2000, // Might be 2 requests / post (content & parent)
+            duration: 5000, // Might be 2 requests / post (content & parent)
         },
     }
 );
