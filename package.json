@@ -18,7 +18,7 @@
     "got": "^7.1.0",
     "hashids": "^1.1.4",
     "html-entities": "^1.2.1",
-    "mysql2": "^1.5.3",
+    "mysql2": "^2.3.3",
     "node-cache": "^5.1.2",
     "nodemon": "^2.0.18",
     "passport": "^0.6.0",
