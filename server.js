@@ -202,6 +202,10 @@ server.get( '/', ( request, response ) => {
     response.json( 'Wanna do cool stuff? Msg me wherever /u/Kokarn kokarn@gmail @oskarrisberg' );
 } );
 
+server.get( '/health', ( request, response ) => {
+    response.json( { status: 'ok' } );
+} );
+
 server.get( '/loaderio-7fa45b57bc0a2a51cd5159425752f4f2/', ( request, response ) => {
     response.sendRaw( 'loaderio-7fa45b57bc0a2a51cd5159425752f4f2' );
 } );
