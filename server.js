@@ -44,7 +44,10 @@ const server = restify.createServer( {
 
 const tokenData = JSON.parse(process.env.API_TOKENS);
 
-const myCache = new NodeCache();
+const myCache = new NodeCache( {
+    stdTTL: CACHE_TIMES.posts,
+    maxKeys: 5000,
+} );
 
 const authenticate = function authenticate ( routePath, method, token ) {
     if ( !tokenData[ token ] ) {
@@ -88,16 +91,36 @@ const addHeader = ( request, response, next ) => {
     next();
 };
 
+const accessLog = ( request, response, next ) => {
+    const startNs = process.hrtime.bigint();
+    const clientIp = request.headers[ 'cf-connecting-ip' ]
+        || ( request.headers[ 'x-forwarded-for' ] || '' ).split( ',' )[ 0 ].trim()
+        || ( request.connection && request.connection.remoteAddress )
+        || '-';
+    const userAgent = request.headers[ 'user-agent' ] || '-';
+
+    response.on( 'finish', () => {
+        const durationMs = Number( process.hrtime.bigint() - startNs ) / 1e6;
+        console.log( `[access] ${ new Date().toISOString() } ${ clientIp } "${ request.method } ${ request.url }" ${ response.statusCode } ${ durationMs.toFixed( 1 ) }ms "${ userAgent }"` );
+    } );
+
+    next();
+};
+
 server.pre( cors.preflight );
 server.use( cors.actual );
 server.use( restify.plugins.bodyParser() );
 server.use( restify.plugins.queryParser() );
 server.use( restify.plugins.gzipResponse() );
 server.use( addHeader );
+server.use( accessLog );
 
 processor();
 
-const postsCache = [];
+const postsCache = new NodeCache( {
+    stdTTL: CACHE_TIMES.singlePost,
+    maxKeys: 50000,
+} );
 let allAccounts = [];
 
 const getCacheKey = ( request ) => {
@@ -1228,7 +1251,7 @@ server.head(
             },
         };
 
-        if(postsCache.includes(request.params.hash)){
+        if ( postsCache.has( request.params.hash ) ) {
             response.status( SUCCESS_STATUS_CODE );
             response.end();
 
@@ -1238,7 +1261,11 @@ server.head(
         models.Post.count( query )
             .then( ( postCount ) => {
                 if ( postCount ) {
-                    postsCache.push(request.params.hash);
+                    try {
+                        postsCache.set( request.params.hash, true );
+                    } catch ( cacheError ) {
+                        // maxKeys reached — safe to ignore, the cache is just an optimization
+                    }
 
                     response.cache( 'public', {
                         maxAge: CACHE_TIMES.singlePost,
