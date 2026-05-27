@@ -99,6 +99,8 @@ const accessLog = ( request, response, next ) => {
         || '-';
     const userAgent = request.headers[ 'user-agent' ] || '-';
 
+    console.log( `[access:start] ${ new Date().toISOString() } ${ clientIp } "${ request.method } ${ request.url }" "${ userAgent }"` );
+
     response.on( 'finish', () => {
         const durationMs = Number( process.hrtime.bigint() - startNs ) / 1e6;
         console.log( `[access] ${ new Date().toISOString() } ${ clientIp } "${ request.method } ${ request.url }" ${ response.statusCode } ${ durationMs.toFixed( 1 ) }ms "${ userAgent }"` );
@@ -216,10 +218,23 @@ const getAccountsForGame = async (gameIdentifier) => {
 };
 
 // Anything with a dot basically
-server.get( /\/.*\..+?/, restify.plugins.serveStatic( {
+const serveStatic = restify.plugins.serveStatic( {
     default: 'index.json',
     directory: './static',
-} ) );
+} );
+
+server.get( /\/.*\..+?/, ( request, response, next ) => {
+    try {
+        decodeURIComponent( request.path() );
+    } catch ( decodeError ) {
+        response.status( MALFORMED_REQUEST_STATUS_CODE );
+        response.end();
+
+        return next( false );
+    }
+
+    return serveStatic( request, response, next );
+} );
 
 server.get( '/', ( request, response ) => {
     response.json( 'Wanna do cool stuff? Msg me wherever /u/Kokarn kokarn@gmail @oskarrisberg' );
@@ -1302,6 +1317,15 @@ server.on( 'restifyError', ( request, response, error ) => {
     //         response.end();
     //         break;
     // }
+} );
+
+process.on( 'uncaughtException', ( error ) => {
+    console.error( `[fatal] uncaughtException ${ new Date().toISOString() }`, error );
+    process.exit( 1 );
+} );
+
+process.on( 'unhandledRejection', ( reason ) => {
+    console.error( `[fatal] unhandledRejection ${ new Date().toISOString() }`, reason );
 } );
 
 server.listen( LISTEN_PORT, () => {
