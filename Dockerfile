@@ -10,4 +10,4 @@ RUN npm ci --only=production
 
 COPY . .
 
-CMD [ "node", "server.js" ]
+CMD [ "node", "--max-old-space-size=1536", "server.js" ]

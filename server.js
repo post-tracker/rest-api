@@ -46,7 +46,7 @@ const tokenData = JSON.parse(process.env.API_TOKENS);
 
 const myCache = new NodeCache( {
     stdTTL: CACHE_TIMES.posts,
-    maxKeys: 5000,
+    maxKeys: 1000,
 } );
 
 const authenticate = function authenticate ( routePath, method, token ) {
@@ -442,7 +442,11 @@ server.get(
                 } );
 
                 if( posts.length > 0 ) {
-                    myCache.set(cacheKey, JSON.stringify(posts), CACHE_TIMES.posts);
+                    try {
+                        myCache.set(cacheKey, JSON.stringify(posts), CACHE_TIMES.posts);
+                    } catch ( cacheError ) {
+                        // maxKeys reached — safe to ignore, the cache is just an optimization
+                    }
                 }
             } )
             .catch( ( findError ) => {
