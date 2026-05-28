@@ -8,7 +8,7 @@ const Hashids = require( 'hashids' );
 const Strategy = require( 'passport-http-bearer' ).Strategy;
 const corsMiddleware = require( 'restify-cors-middleware' );
 const { Op } = require('sequelize');
-const NodeCache = require('node-cache');
+const { LRUCache } = require( 'lru-cache' );
 
 const models = require( './models' );
 const processor = require( './modules/processor.js' );
@@ -44,9 +44,13 @@ const server = restify.createServer( {
 
 const tokenData = JSON.parse(process.env.API_TOKENS);
 
-const myCache = new NodeCache( {
-    stdTTL: CACHE_TIMES.posts,
-    maxKeys: 1000,
+const myCache = new LRUCache( {
+    max: 1000,
+    maxSize: 800 * 1024 * 1024,
+    sizeCalculation: ( value ) => {
+        return value.length;
+    },
+    ttl: CACHE_TIMES.posts * 1000,
 } );
 
 const authenticate = function authenticate ( routePath, method, token ) {
@@ -119,9 +123,9 @@ server.use( accessLog );
 
 processor();
 
-const postsCache = new NodeCache( {
-    stdTTL: CACHE_TIMES.singlePost,
-    maxKeys: 50000,
+const postsCache = new LRUCache( {
+    max: 50000,
+    ttl: CACHE_TIMES.singlePost * 1000,
 } );
 let allAccounts = [];
 
@@ -442,11 +446,7 @@ server.get(
                 } );
 
                 if( posts.length > 0 ) {
-                    try {
-                        myCache.set(cacheKey, JSON.stringify(posts), CACHE_TIMES.posts);
-                    } catch ( cacheError ) {
-                        // maxKeys reached — safe to ignore, the cache is just an optimization
-                    }
+                    myCache.set( cacheKey, JSON.stringify( posts ) );
                 }
             } )
             .catch( ( findError ) => {
@@ -1280,11 +1280,7 @@ server.head(
         models.Post.count( query )
             .then( ( postCount ) => {
                 if ( postCount ) {
-                    try {
-                        postsCache.set( request.params.hash, true );
-                    } catch ( cacheError ) {
-                        // maxKeys reached — safe to ignore, the cache is just an optimization
-                    }
+                    postsCache.set( request.params.hash, true );
 
                     response.cache( 'public', {
                         maxAge: CACHE_TIMES.singlePost,
