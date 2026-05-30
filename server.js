@@ -22,6 +22,7 @@ const NOT_FOUND_STATUS_CODE = 404;
 const EXISTING_RESOURCE_STATUS_CODE = 409;
 const ID_HASH_MIN_LENGTH = 8;
 const MAX_POST_LIMIT = 1000;
+const MAX_POST_OFFSET = 10000;
 const DEFAULT_POST_LIMIT = 50;
 const CACHE_TIMES = {
     favicon: 2592000,
@@ -129,40 +130,38 @@ const postsCache = new LRUCache( {
 } );
 let allAccounts = [];
 
+const CACHE_QUERY_KEYS = [
+    'search',
+    'services',
+    'groups',
+    'excludeService',
+    'limit',
+    'offset',
+];
+
 const getCacheKey = ( request ) => {
-    let cacheKey = request.params.game;
+    const params = new URLSearchParams();
 
-    cacheKey = `${ cacheKey }/${ request.params.path }`;
+    for ( const key of CACHE_QUERY_KEYS ) {
+        const value = request.query[ key ];
 
-    if ( request.query.search ) {
-        cacheKey = `${ cacheKey }/${ request.query.search }`;
-    }
+        if ( value === undefined || value === null || value === '' ) {
+            continue;
+        }
 
-    if ( request.query.services ) {
-        cacheKey = `${ cacheKey }/${ request.query.services.join(',') }`;
-    }
-
-    if ( request.query.groups ) {
-        cacheKey = `${ cacheKey }/${ request.query.groups.join(',') }`;
-    }
-
-    if ( request.query.excludeService ) {
-        if( Array.isArray( request.query.excludeService ) ) {
-            cacheKey = `${ cacheKey }/${ request.query.excludeService.join(',') }`;
+        if ( Array.isArray( value ) ) {
+            params.append( key, value.join( ',' ) );
         } else {
-            cacheKey = `${ cacheKey }/${ request.query.excludeService }`;
+            params.append( key, String( value ) );
         }
     }
 
-    if ( request.query.limit ) {
-        cacheKey = `${ cacheKey }/${ request.query.limit }`;
-    }
+    params.sort();
 
-    if ( request.query.offset ) {
-        cacheKey = `${ cacheKey }/${ request.query.offset }`;
-    }
+    const queryString = params.toString();
+    const base = `${ request.params.game }/posts`;
 
-    return cacheKey;
+    return queryString ? `${ base }?${ queryString }` : base;
 };
 
 const getAllAccounts = async () => {
@@ -352,6 +351,15 @@ server.get(
 
         if ( request.query.offset ) {
             const postOffset = Number( request.query.offset );
+
+            if ( postOffset > MAX_POST_OFFSET ) {
+                response.status( MALFORMED_REQUEST_STATUS_CODE );
+                response.json( {
+                    error: `offset must be <= ${ MAX_POST_OFFSET }`,
+                } );
+
+                return false;
+            }
 
             if ( postOffset > 0 ) {
                 query.offset = postOffset;
