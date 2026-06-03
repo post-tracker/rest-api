@@ -31,7 +31,12 @@ const CACHE_TIMES = {
     services: 3600,
     singlePost: 2592000,
     singlePostHead: 600,
+    stats: 300,
 };
+
+const STATS_WINDOW_DAYS = 30;
+const SECONDS_PER_DAY = 86400;
+const MILLISECONDS_PER_SECOND = 1000;
 
 const hashids = new Hashids( '', ID_HASH_MIN_LENGTH, 'abcdefghijklmnopqrstuvwxyz' );
 
@@ -880,6 +885,117 @@ server.get(
             .catch( ( queryError ) => {
                 console.log( queryError );
             } );
+    }
+);
+
+server.get(
+    '/stats',
+    passport.authenticate( 'bearer', {
+        session: false,
+    } ),
+    async ( request, response ) => {
+        const cached = myCache.get( 'stats' );
+
+        if ( cached ) {
+            response.json( JSON.parse( cached ) );
+
+            return;
+        }
+
+        try {
+            const [ games, developers, accounts, posts ] = await Promise.all( [
+                models.Game.count(),
+                models.Developer.count(),
+                models.Account.count(),
+                models.Post.count(),
+            ] );
+
+            const perServiceRows = await models.Post.findAll( {
+                attributes: [
+                    [ models.sequelize.literal( 'COUNT(*)' ), 'count' ],
+                ],
+                group: [
+                    'account.service',
+                ],
+                include: [
+                    {
+                        attributes: [
+                            'service',
+                        ],
+                        model: models.Account,
+                    },
+                ],
+                raw: true,
+            } );
+
+            const postsPerService = perServiceRows
+                .map( ( row ) => {
+                    return {
+                        count: Number( row.count ),
+                        service: row[ 'account.service' ],
+                    };
+                } )
+                .filter( ( entry ) => {
+                    return entry.service;
+                } )
+                .sort( ( a, b ) => {
+                    return b.count - a.count;
+                } );
+
+            const since = Math.floor( Date.now() / MILLISECONDS_PER_SECOND ) - ( STATS_WINDOW_DAYS * SECONDS_PER_DAY );
+            const dateExpression = models.sequelize.fn(
+                'DATE',
+                models.sequelize.fn( 'FROM_UNIXTIME', models.sequelize.col( 'timestamp' ) )
+            );
+
+            const overTimeRows = await models.Post.findAll( {
+                attributes: [
+                    [ dateExpression, 'date' ],
+                    [ models.sequelize.literal( 'COUNT(*)' ), 'count' ],
+                ],
+                group: [
+                    dateExpression,
+                ],
+                order: [
+                    models.sequelize.literal( 'date ASC' ),
+                ],
+                raw: true,
+                where: {
+                    timestamp: {
+                        [ Op.gte ]: since,
+                    },
+                },
+            } );
+
+            const postsOverTime = overTimeRows.map( ( row ) => {
+                return {
+                    count: Number( row.count ),
+                    date: row.date,
+                };
+            } );
+
+            const payload = {
+                postsOverTime: postsOverTime,
+                postsPerService: postsPerService,
+                totals: {
+                    accounts: accounts,
+                    developers: developers,
+                    games: games,
+                    posts: posts,
+                },
+            };
+
+            myCache.set( 'stats', JSON.stringify( payload ), {
+                ttl: CACHE_TIMES.stats * MILLISECONDS_PER_SECOND,
+            } );
+
+            response.json( payload );
+        } catch ( statsError ) {
+            console.error( statsError );
+            response.send( INTERNAL_SERVER_ERROR_STATUS_CODE, {
+                error: 'Failed to compute stats',
+            } );
+        }
     }
 );
 
