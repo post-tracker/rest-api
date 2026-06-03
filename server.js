@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const crypto = require( 'crypto' );
 const sha1 = require( 'sha1' );
 const restify = require( 'restify' );
 const passport = require( 'passport' );
@@ -18,7 +19,10 @@ const JSON_INDENTATION = 4;
 const SUCCESS_STATUS_CODE = 200;
 const INTERNAL_SERVER_ERROR_STATUS_CODE = 500;
 const MALFORMED_REQUEST_STATUS_CODE = 400;
+const FORBIDDEN_STATUS_CODE = 403;
 const NOT_FOUND_STATUS_CODE = 404;
+const TOKEN_REFRESH_INTERVAL = 60 * 1000;
+const TOKEN_LENGTH = 24;
 const EXISTING_RESOURCE_STATUS_CODE = 409;
 const ID_HASH_MIN_LENGTH = 8;
 const MAX_POST_LIMIT = 1000;
@@ -48,7 +52,88 @@ const server = restify.createServer( {
     name: 'Post tracker REST API',
 } );
 
-const tokenData = JSON.parse(process.env.API_TOKENS);
+// Tokens live in the `tokens` DB table (name + scopes per token). They're
+// cached in memory so auth doesn't hit the DB on every request; the cache is
+// refreshed periodically and busted immediately when tokens are created/revoked.
+const tokenScopes = new Map();
+
+// Optional break-glass token: always authenticates with admin scope and is
+// never stored in the DB, so an empty/unreachable tokens table can't lock
+// everyone out (recovery / first boot).
+const ROOT_API_TOKEN = process.env.ROOT_API_TOKEN;
+
+// Transitional fallback for the pre-DB env-var token registry. A token that
+// isn't in the DB (or the ROOT break-glass) is authorized against its old
+// per-path/method permissions from API_TOKENS, exactly as before — so existing
+// tokens keep working across the deploy with no service interruption. Once all
+// tokens are seeded into the `tokens` table, remove API_TOKENS from the env and
+// this fallback goes dormant.
+const legacyTokenData = process.env.API_TOKENS ? JSON.parse( process.env.API_TOKENS ) : {};
+
+const legacyAuthorize = function legacyAuthorize ( token, routePath, method ) {
+    const entry = legacyTokenData[ token ];
+
+    if ( !entry || !entry.paths || !entry.paths[ routePath ] ) {
+        return false;
+    }
+
+    return entry.paths[ routePath ].includes( method );
+};
+
+const loadTokens = async function loadTokens () {
+    const tokens = await models.Token.findAll( {
+        where: {
+            active: true,
+        },
+    } );
+
+    tokenScopes.clear();
+
+    tokens.forEach( ( tokenRow ) => {
+        tokenScopes.set( tokenRow.token, {
+            name: tokenRow.name,
+            scopes: tokenRow.scopes || [],
+        } );
+    } );
+};
+
+const lookupToken = function lookupToken ( token ) {
+    if ( ROOT_API_TOKEN && token === ROOT_API_TOKEN ) {
+        return {
+            name: 'root',
+            scopes: [ 'admin' ],
+        };
+    }
+
+    const found = tokenScopes.get( token );
+
+    if ( found ) {
+        return found;
+    }
+
+    // Not yet migrated to the DB — recognise it so passport authenticates it;
+    // requireScope/the GET /games check then fall back to its legacy per-path
+    // permissions instead of scopes.
+    if ( legacyTokenData[ token ] ) {
+        return {
+            legacy: true,
+            name: 'legacy',
+            scopes: [],
+        };
+    }
+
+    return false;
+};
+
+const generateToken = function generateToken () {
+    let token = '';
+
+    while ( token.length < TOKEN_LENGTH ) {
+        token += crypto.randomBytes( TOKEN_LENGTH ).toString( 'base64' ).replace( /[^a-zA-Z0-9]/g, '' );
+    }
+
+    return token.slice( 0, TOKEN_LENGTH );
+};
 
 const myCache = new LRUCache( {
     max: 1000,
@@ -59,36 +144,56 @@ const myCache = new LRUCache( {
     ttl: CACHE_TIMES.posts * 1000,
 } );
 
-const authenticate = function authenticate ( routePath, method, token ) {
-    if ( !tokenData[ token ] ) {
-        return false;
-    }
-
-    if ( !tokenData[ token ].paths[ routePath ] ) {
-        console.log( `${ token } not authenticated for ${ routePath }` );
-
-        return false;
-    }
-
-    if ( !tokenData[ token ].paths[ routePath ].includes( method ) ) {
-        console.log( `${ token } not authenticated for ${ method } on ${ routePath }` );
-
-        return false;
-    }
-
-    return true;
-};
-
 passport.use( new Strategy(
-    {
-        passReqToCallback: true,
-    },
-    ( request, token, authenticationCallback ) => {
-        const authenticationResult = authenticate( request.route.path, request.method, token );
+    ( token, authenticationCallback ) => {
+        const found = lookupToken( token );
 
-        return authenticationCallback( null, authenticationResult );
+        if ( !found ) {
+            return authenticationCallback( null, false );
+        }
+
+        return authenticationCallback( null, {
+            legacy: found.legacy || false,
+            name: found.name,
+            scopes: found.scopes,
+            token: token,
+        } );
     }
 ) );
+
+// Route guard factory: authenticates the bearer token, then requires the token
+// to carry the given scope (the `admin` scope satisfies any requirement).
+const requireScope = function requireScope ( scope ) {
+    return [
+        passport.authenticate( 'bearer', {
+            session: false,
+        } ),
+        ( request, response, next ) => {
+            const user = request.user || {};
+
+            // Legacy env-var tokens authorize against their old per-path map
+            // rather than scopes, preserving their exact prior access.
+            if ( user.legacy ) {
+                if ( legacyAuthorize( user.token, request.route.path, request.method ) ) {
+                    return next();
+                }
+            } else {
+                const scopes = user.scopes || [];
+
+                if ( scopes.includes( 'admin' ) || scopes.includes( scope ) ) {
+                    return next();
+                }
+            }
+
+            response.send( FORBIDDEN_STATUS_CODE, {
+                error: 'Insufficient scope',
+                required: scope,
+            } );
+
+            return false;
+        },
+    ];
+};
 
 const cors = corsMiddleware( {
     allowHeaders: [ 'authorization' ],
@@ -128,6 +233,17 @@ server.use( addHeader );
 server.use( accessLog );
 
 processor();
+
+// Prime the token cache and keep it fresh so newly issued / revoked tokens
+// propagate without a restart.
+loadTokens().catch( ( loadError ) => {
+    console.error( 'Failed to load tokens', loadError );
+} );
+setInterval( () => {
+    loadTokens().catch( ( loadError ) => {
+        console.error( 'Failed to refresh tokens', loadError );
+    } );
+}, TOKEN_REFRESH_INTERVAL );
 
 const postsCache = new LRUCache( {
     max: 50000,
@@ -612,7 +728,16 @@ server.get(
                     if ( tokenMatch ) {
                         instantReponse = false;
 
-                        const isAuthed = authenticate( request.route.path, request.method, tokenMatch[ 1 ] )
+                        const matchedToken = lookupToken( tokenMatch[ 1 ] );
+                        let isAuthed = false;
+
+                        if ( matchedToken && matchedToken.legacy ) {
+                            isAuthed = legacyAuthorize( tokenMatch[ 1 ], request.route.path, request.method );
+                        } else if ( matchedToken ) {
+                            isAuthed = matchedToken.scopes.includes( 'admin' )
+                                || matchedToken.scopes.includes( 'games:read' );
+                        }
+
                         if ( isAuthed ) {
                             response.json( {
                                 // eslint-disable-next-line id-blacklist
@@ -642,9 +767,7 @@ server.get(
 
 server.get(
     '/:game/accounts',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
+    ...requireScope( 'accounts:read' ),
     async ( request, response ) => {
         let gameAccounts = await getAccountsForGame(request.params.game);
 
@@ -674,9 +797,7 @@ server.get(
 
 server.get(
     '/:game/developers',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
+    ...requireScope( 'developers:read' ),
     ( request, response ) => {
         const query = {
             include: [
@@ -710,9 +831,7 @@ server.get(
 
 server.get(
     '/:game/hashes',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
+    ...requireScope( 'hashes:read' ),
     ( request, response ) => {
         const query = {
             attributes: [
@@ -890,9 +1009,7 @@ server.get(
 
 server.get(
     '/stats',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
+    ...requireScope( 'stats:read' ),
     async ( request, response ) => {
         const cached = myCache.get( 'stats' );
 
@@ -1001,9 +1118,7 @@ server.get(
 
 server.post(
     '/:game/posts',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
+    ...requireScope( 'posts:write' ),
     ( request, response ) => {
         models.Post.findOrCreate(
             {
@@ -1060,9 +1175,7 @@ server.post(
 
 server.post(
     '/:game/accounts',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
+    ...requireScope( 'accounts:write' ),
     ( request, response ) => {
         // console.log( request.body );
         models.Account.findOrCreate(
@@ -1105,9 +1218,7 @@ server.post(
 
 server.post(
     '/:game/developers',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
+    ...requireScope( 'developers:write' ),
     ( request, response ) => {
         models.Developer.findOrCreate(
             {
@@ -1153,9 +1264,7 @@ server.post(
 
 server.post(
     '/games',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
+    ...requireScope( 'games:write' ),
     ( request, response ) => {
         models.Game.findOrCreate(
             {
@@ -1199,9 +1308,7 @@ server.post(
 
 server.patch(
     '/games/:identifier',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
+    ...requireScope( 'games:write' ),
     ( request, response ) => {
         models.Game.update(
             request.body.properties,
@@ -1238,9 +1345,7 @@ server.patch(
 
 server.patch(
     '/:game/developers/:id',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
+    ...requireScope( 'developers:write' ),
     ( request, response ) => {
         models.Developer.update(
             request.body.properties,
@@ -1273,9 +1378,7 @@ server.patch(
 
 server.patch(
     '/:game/accounts/:id',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
+    ...requireScope( 'accounts:write' ),
     ( request, response ) => {
         models.Account.update(
             request.body.properties,
@@ -1308,9 +1411,7 @@ server.patch(
 
 server.del(
     '/:game/accounts/:id',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
+    ...requireScope( 'accounts:delete' ),
     ( request, response ) => {
         // console.log( request.body );
         models.Account.destroy(
@@ -1346,9 +1447,7 @@ server.del(
 
 server.del(
     '/:game/posts/:url',
-    passport.authenticate( 'bearer', {
-        session: false,
-    } ),
+    ...requireScope( 'posts:delete' ),
     ( request, response ) => {
         models.Post.destroy(
             {
@@ -1424,6 +1523,104 @@ server.head(
             .catch( ( findError ) => {
                 throw findError;
             } );
+    }
+);
+
+server.get(
+    '/tokens',
+    ...requireScope( 'tokens:manage' ),
+    async ( request, response ) => {
+        try {
+            const tokens = await models.Token.findAll( {
+                attributes: [
+                    'id',
+                    'name',
+                    'scopes',
+                    'active',
+                    'createdAt',
+                ],
+                order: [
+                    [ 'createdAt', 'DESC' ],
+                ],
+            } );
+
+            response.json( {
+                // eslint-disable-next-line id-blacklist
+                data: tokens,
+            } );
+        } catch ( tokensError ) {
+            console.error( tokensError );
+            response.send( INTERNAL_SERVER_ERROR_STATUS_CODE, {
+                error: 'Failed to list tokens',
+            } );
+        }
+    }
+);
+
+server.post(
+    '/tokens',
+    ...requireScope( 'tokens:manage' ),
+    async ( request, response ) => {
+        const name = request.body && request.body.name;
+        const scopes = request.body && request.body.scopes;
+
+        if ( !name || !Array.isArray( scopes ) || scopes.length === 0 ) {
+            response.send( MALFORMED_REQUEST_STATUS_CODE, {
+                error: 'name and a non-empty scopes array are required',
+            } );
+
+            return;
+        }
+
+        try {
+            const created = await models.Token.create( {
+                active: true,
+                name: name,
+                scopes: scopes,
+                token: generateToken(),
+            } );
+
+            await loadTokens();
+
+            // The full token is returned only here, at creation time.
+            response.json( {
+                // eslint-disable-next-line id-blacklist
+                data: {
+                    id: created.id,
+                    name: created.name,
+                    scopes: created.scopes,
+                    token: created.token,
+                },
+            } );
+        } catch ( createError ) {
+            console.error( createError );
+            response.send( INTERNAL_SERVER_ERROR_STATUS_CODE, {
+                error: 'Failed to create token',
+            } );
+        }
+    }
+);
+
+server.del(
+    '/tokens/:id',
+    ...requireScope( 'tokens:manage' ),
+    async ( request, response ) => {
+        try {
+            await models.Token.destroy( {
+                where: {
+                    id: request.params.id,
+                },
+            } );
+
+            await loadTokens();
+
+            response.send( SUCCESS_STATUS_CODE );
+        } catch ( deleteError ) {
+            console.error( deleteError );
+            response.send( INTERNAL_SERVER_ERROR_STATUS_CODE, {
+                error: 'Failed to delete token',
+            } );
+        }
     }
 );
 

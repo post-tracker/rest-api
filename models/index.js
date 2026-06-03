@@ -149,6 +149,36 @@ models.Post = sequelize.define(
     }
 );
 
+models.Token = sequelize.define(
+    'token',
+    {
+        active: {
+            defaultValue: true,
+            type: Sequelize.BOOLEAN,
+        },
+        id: {
+            allowNull: false,
+            autoIncrement: true,
+            primaryKey: true,
+            type: Sequelize.INTEGER,
+        },
+        name: {
+            type: Sequelize.STRING,
+        },
+        scopes: {
+            type: Sequelize.JSON,
+        },
+        token: {
+            type: Sequelize.STRING,
+            unique: true,
+        },
+    },
+    {
+        charset: 'utf8mb4',
+        collate: 'utf8mb4_general_ci',
+    }
+);
+
 models.Game.hasMany( models.Developer, {
     foreignKey: {
         allowNull: false,
