@@ -39,6 +39,8 @@ const CACHE_TIMES = {
 };
 
 const STATS_WINDOW_DAYS = 30;
+const STATS_WEEK_DAYS = 7;
+const STATS_PER_GAME_LIMIT = 20;
 const SECONDS_PER_DAY = 86400;
 const MILLISECONDS_PER_SECOND = 1000;
 
@@ -1027,9 +1029,21 @@ server.get(
                 models.Post.count(),
             ] );
 
+            const nowSeconds = Math.floor( Date.now() / MILLISECONDS_PER_SECOND );
+            const since24h = nowSeconds - SECONDS_PER_DAY;
+            const since7d = nowSeconds - ( STATS_WEEK_DAYS * SECONDS_PER_DAY );
+            const since30d = nowSeconds - ( STATS_WINDOW_DAYS * SECONDS_PER_DAY );
+
+            // Posts per service, broken into rolling windows in one pass so the
+            // dashboard can toggle "added in the last 24h / 7d / 30d / all time"
+            // without a query per timeframe. The bounds come from the server
+            // clock (never user input), so inlining them in SUM() is safe.
             const perServiceRows = await models.Post.findAll( {
                 attributes: [
-                    [ models.sequelize.literal( 'COUNT(*)' ), 'count' ],
+                    [ models.sequelize.literal( 'COUNT(*)' ), 'total' ],
+                    [ models.sequelize.literal( `SUM( timestamp >= ${ since24h } )` ), 'last24h' ],
+                    [ models.sequelize.literal( `SUM( timestamp >= ${ since7d } )` ), 'last7d' ],
+                    [ models.sequelize.literal( `SUM( timestamp >= ${ since30d } )` ), 'last30d' ],
                 ],
                 group: [
                     'account.service',
@@ -1048,7 +1062,12 @@ server.get(
             const postsPerService = perServiceRows
                 .map( ( row ) => {
                     return {
-                        count: Number( row.count ),
+                        counts: {
+                            '24h': Number( row.last24h ) || 0,
+                            '30d': Number( row.last30d ) || 0,
+                            '7d': Number( row.last7d ) || 0,
+                            all: Number( row.total ) || 0,
+                        },
                         service: row[ 'account.service' ],
                     };
                 } )
@@ -1056,8 +1075,89 @@ server.get(
                     return entry.service;
                 } )
                 .sort( ( a, b ) => {
-                    return b.count - a.count;
+                    return b.counts.all - a.counts.all;
                 } );
+
+            // Posts per game. The post→game link runs Post → Account →
+            // Developer → Game; rather than a fragile multi-level grouped join,
+            // count posts per account (a fast single-table GROUP BY) and roll
+            // those up by each account's developer.gameId in JS.
+            const perAccountRows = await models.Post.findAll( {
+                attributes: [
+                    'accountId',
+                    [ models.sequelize.literal( 'COUNT(*)' ), 'count' ],
+                ],
+                group: [
+                    'accountId',
+                ],
+                raw: true,
+            } );
+
+            const accountRows = await models.Account.findAll( {
+                attributes: [
+                    'id',
+                ],
+                include: [
+                    {
+                        attributes: [
+                            'gameId',
+                        ],
+                        model: models.Developer,
+                        required: true,
+                    },
+                ],
+                raw: true,
+            } );
+
+            const gameIdByAccount = {};
+
+            accountRows.forEach( ( row ) => {
+                // The included gameId comes back under a Sequelize-prefixed raw
+                // key (e.g. 'developer.gameId'); match it without hard-coding.
+                const gameIdKey = Object.keys( row ).find( ( key ) => {
+                    return ( /gameId$/i ).test( key );
+                } );
+
+                gameIdByAccount[ row.id ] = gameIdKey ? row[ gameIdKey ] : null;
+            } );
+
+            const countByGameId = {};
+
+            perAccountRows.forEach( ( row ) => {
+                const gameId = gameIdByAccount[ row.accountId ];
+
+                if ( !gameId ) {
+                    return;
+                }
+
+                countByGameId[ gameId ] = ( countByGameId[ gameId ] || 0 ) + ( Number( row.count ) || 0 );
+            } );
+
+            const gameRows = await models.Game.findAll( {
+                attributes: [
+                    'id',
+                    'name',
+                ],
+                raw: true,
+            } );
+
+            const gameNameById = {};
+
+            gameRows.forEach( ( game ) => {
+                gameNameById[ game.id ] = game.name;
+            } );
+
+            const postsPerGame = Object.keys( countByGameId )
+                .map( ( gameId ) => {
+                    return {
+                        count: countByGameId[ gameId ],
+                        name: gameNameById[ gameId ] || `#${ gameId }`,
+                    };
+                } )
+                .sort( ( a, b ) => {
+                    return b.count - a.count;
+                } )
+                .slice( 0, STATS_PER_GAME_LIMIT );
 
             const since = Math.floor( Date.now() / MILLISECONDS_PER_SECOND ) - ( STATS_WINDOW_DAYS * SECONDS_PER_DAY );
             const dateExpression = models.sequelize.fn(
@@ -1093,6 +1193,7 @@ server.get(
 
             const payload = {
                 postsOverTime: postsOverTime,
+                postsPerGame: postsPerGame,
                 postsPerService: postsPerService,
                 totals: {
                     accounts: accounts,
