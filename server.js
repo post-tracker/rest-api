@@ -1492,6 +1492,94 @@ server.patch(
     }
 );
 
+server.post(
+    '/:game/developers/:id/merge',
+    ...requireScope( 'developers:write' ),
+    ( request, response ) => {
+        const sourceId = Number( request.params.id );
+        const targetId = Number( request.body && request.body.targetId );
+
+        // Reject a missing target or a merge of a developer into itself.
+        if ( !targetId || sourceId === targetId ) {
+            response.status( MALFORMED_REQUEST_STATUS_CODE );
+            response.end();
+
+            return;
+        }
+
+        models.Game.findOne( {
+            where: {
+                identifier: request.params.game,
+            },
+        } )
+            .then( ( game ) => {
+                if ( !game ) {
+                    return false;
+                }
+
+                // Both developers must exist and belong to this game; this
+                // blocks cross-game merges and stale ids.
+                return Promise.all( [
+                    models.Developer.findOne( { where: { gameId: game.id, id: sourceId } } ),
+                    models.Developer.findOne( { where: { gameId: game.id, id: targetId } } ),
+                ] )
+                    .then( ( [ source, target ] ) => {
+                        if ( !source || !target ) {
+                            return false;
+                        }
+
+                        // Reassign the source's accounts first, then delete the
+                        // now-empty source. Order matters: Developer->Account is
+                        // onDelete CASCADE, so deleting a developer that still
+                        // owned accounts would cascade-delete them and their
+                        // posts. Wrap both in a transaction so a failure rolls
+                        // back rather than orphaning or losing data.
+                        return models.sequelize.transaction( ( transaction ) => {
+                            return models.Account.update(
+                                {
+                                    developerId: targetId,
+                                },
+                                {
+                                    transaction: transaction,
+                                    where: {
+                                        developerId: sourceId,
+                                    },
+                                }
+                            )
+                                .then( () => {
+                                    return models.Developer.destroy( {
+                                        transaction: transaction,
+                                        where: {
+                                            id: sourceId,
+                                        },
+                                    } );
+                                } );
+                        } )
+                            .then( () => {
+                                return true;
+                            } );
+                    } );
+            } )
+            .then( ( merged ) => {
+                if ( merged ) {
+                    console.log( `${ new Date() } - developer ${ sourceId } merged into ${ targetId } for ${ request.params.game }` );
+
+                    response.status( SUCCESS_STATUS_CODE );
+                } else {
+                    response.status( NOT_FOUND_STATUS_CODE );
+                }
+
+                response.end();
+            } )
+            .catch( ( mergeError ) => {
+                response.status( MALFORMED_REQUEST_STATUS_CODE );
+                response.end();
+
+                console.log( mergeError );
+            } );
+    }
+);
+
 server.patch(
     '/:game/accounts/:id',
     ...requireScope( 'accounts:write' ),
