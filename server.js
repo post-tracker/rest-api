@@ -705,10 +705,8 @@ server.get(
                     const config = {};
 
                     if ( game.config ) {
-                        if ( typeof game.config.live !== 'undefined' && !game.config.live ) {
-                            continue;
-                        }
-
+                        // Offline games (config.live falsy) stay in the public
+                        // response — "offline" only stops indexing, not visibility.
                         if ( game.config.boxart ) {
                             config.boxart = game.config.boxart;
                         }
