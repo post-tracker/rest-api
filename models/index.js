@@ -146,6 +146,18 @@ models.Post = sequelize.define(
     {
         charset: 'utf8mb4',
         collate: 'utf8mb4_general_ci',
+        // The /stats endpoint range-scans posts by timestamp (rolling windows
+        // and posts-over-time). Schema is managed manually (no sequelize.sync),
+        // so this index must also be applied via SQL:
+        //   ALTER TABLE posts ADD INDEX posts_timestamp (timestamp);
+        indexes: [
+            {
+                fields: [
+                    'timestamp',
+                ],
+                name: 'posts_timestamp',
+            },
+        ],
     }
 );
 

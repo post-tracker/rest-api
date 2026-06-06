@@ -1033,58 +1033,13 @@ server.get(
             const since30d = nowSeconds - ( STATS_WINDOW_DAYS * SECONDS_PER_DAY );
             const since90d = nowSeconds - ( STATS_QUARTER_DAYS * SECONDS_PER_DAY );
 
-            // Posts per service, broken into rolling windows in one pass so the
-            // dashboard can toggle "added in the last 24h / 7d / 30d / 90d / all time"
-            // without a query per timeframe. The bounds come from the server
+            // Posts grouped by account in a single rolling-window pass — this is
+            // the only full scan of the posts table. Both the per-service and
+            // per-game breakdowns are rolled up from these rows in JS below: an
+            // account maps to exactly one service and (via its developer) one
+            // game, so there's no need to scan posts again or join to accounts
+            // just to group by service. The window bounds come from the server
             // clock (never user input), so inlining them in SUM() is safe.
-            const perServiceRows = await models.Post.findAll( {
-                attributes: [
-                    [ models.sequelize.literal( 'COUNT(*)' ), 'total' ],
-                    [ models.sequelize.literal( `SUM( timestamp >= ${ since24h } )` ), 'last24h' ],
-                    [ models.sequelize.literal( `SUM( timestamp >= ${ since7d } )` ), 'last7d' ],
-                    [ models.sequelize.literal( `SUM( timestamp >= ${ since30d } )` ), 'last30d' ],
-                    [ models.sequelize.literal( `SUM( timestamp >= ${ since90d } )` ), 'last90d' ],
-                ],
-                group: [
-                    'account.service',
-                ],
-                include: [
-                    {
-                        attributes: [
-                            'service',
-                        ],
-                        model: models.Account,
-                    },
-                ],
-                raw: true,
-            } );
-
-            const postsPerService = perServiceRows
-                .map( ( row ) => {
-                    return {
-                        counts: {
-                            '24h': Number( row.last24h ) || 0,
-                            '30d': Number( row.last30d ) || 0,
-                            '7d': Number( row.last7d ) || 0,
-                            '90d': Number( row.last90d ) || 0,
-                            all: Number( row.total ) || 0,
-                        },
-                        service: row[ 'account.service' ],
-                    };
-                } )
-                .filter( ( entry ) => {
-                    return entry.service;
-                } )
-                .sort( ( a, b ) => {
-                    return b.counts.all - a.counts.all;
-                } );
-
-            // Posts per game, in the same rolling windows as per-service so the
-            // dashboard's timeframe toggle drives both. The post→game link runs
-            // Post → Account → Developer → Game; rather than a fragile
-            // multi-level grouped join, count posts per account (a fast
-            // single-table GROUP BY) and roll those up by each account's
-            // developer.gameId in JS.
             const perAccountRows = await models.Post.findAll( {
                 attributes: [
                     'accountId',
@@ -1100,9 +1055,13 @@ server.get(
                 raw: true,
             } );
 
+            // One row per account carrying both its service and owning game, so
+            // a single query feeds both rollups. Every account has a non-null
+            // developer→game FK, so the required join drops nothing.
             const accountRows = await models.Account.findAll( {
                 attributes: [
                     'id',
+                    'service',
                 ],
                 include: [
                     {
@@ -1117,6 +1076,7 @@ server.get(
             } );
 
             const gameIdByAccount = {};
+            const serviceByAccount = {};
 
             accountRows.forEach( ( row ) => {
                 // The included gameId comes back under a Sequelize-prefixed raw
@@ -1126,33 +1086,62 @@ server.get(
                 } );
 
                 gameIdByAccount[ row.id ] = gameIdKey ? row[ gameIdKey ] : null;
+                serviceByAccount[ row.id ] = row.service;
             } );
+
+            const emptyCounts = () => {
+                return {
+                    '24h': 0,
+                    '30d': 0,
+                    '7d': 0,
+                    '90d': 0,
+                    all: 0,
+                };
+            };
+
+            const addWindowCounts = ( target, row ) => {
+                target[ '24h' ] += Number( row.last24h ) || 0;
+                target[ '7d' ] += Number( row.last7d ) || 0;
+                target[ '30d' ] += Number( row.last30d ) || 0;
+                target[ '90d' ] += Number( row.last90d ) || 0;
+                target.all += Number( row.total ) || 0;
+            };
 
             const countByGameId = {};
+            const countByService = {};
 
             perAccountRows.forEach( ( row ) => {
+                const service = serviceByAccount[ row.accountId ];
+
+                if ( service ) {
+                    if ( !countByService[ service ] ) {
+                        countByService[ service ] = emptyCounts();
+                    }
+
+                    addWindowCounts( countByService[ service ], row );
+                }
+
                 const gameId = gameIdByAccount[ row.accountId ];
 
-                if ( !gameId ) {
-                    return;
-                }
+                if ( gameId ) {
+                    if ( !countByGameId[ gameId ] ) {
+                        countByGameId[ gameId ] = emptyCounts();
+                    }
 
-                if ( !countByGameId[ gameId ] ) {
-                    countByGameId[ gameId ] = {
-                        '24h': 0,
-                        '30d': 0,
-                        '7d': 0,
-                        '90d': 0,
-                        all: 0,
-                    };
+                    addWindowCounts( countByGameId[ gameId ], row );
                 }
-
-                countByGameId[ gameId ][ '24h' ] += Number( row.last24h ) || 0;
-                countByGameId[ gameId ][ '30d' ] += Number( row.last30d ) || 0;
-                countByGameId[ gameId ][ '7d' ] += Number( row.last7d ) || 0;
-                countByGameId[ gameId ][ '90d' ] += Number( row.last90d ) || 0;
-                countByGameId[ gameId ].all += Number( row.total ) || 0;
             } );
+
+            const postsPerService = Object.keys( countByService )
+                .map( ( service ) => {
+                    return {
+                        counts: countByService[ service ],
+                        service: service,
+                    };
+                } )
+                .sort( ( a, b ) => {
+                    return b.counts.all - a.counts.all;
+                } );
 
             const gameRows = await models.Game.findAll( {
                 attributes: [
