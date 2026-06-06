@@ -39,6 +39,7 @@ const CACHE_TIMES = {
 };
 
 const STATS_WINDOW_DAYS = 30;
+const STATS_QUARTER_DAYS = 90;
 const STATS_WEEK_DAYS = 7;
 const SECONDS_PER_DAY = 86400;
 const MILLISECONDS_PER_SECOND = 1000;
@@ -1030,9 +1031,10 @@ server.get(
             const since24h = nowSeconds - SECONDS_PER_DAY;
             const since7d = nowSeconds - ( STATS_WEEK_DAYS * SECONDS_PER_DAY );
             const since30d = nowSeconds - ( STATS_WINDOW_DAYS * SECONDS_PER_DAY );
+            const since90d = nowSeconds - ( STATS_QUARTER_DAYS * SECONDS_PER_DAY );
 
             // Posts per service, broken into rolling windows in one pass so the
-            // dashboard can toggle "added in the last 24h / 7d / 30d / all time"
+            // dashboard can toggle "added in the last 24h / 7d / 30d / 90d / all time"
             // without a query per timeframe. The bounds come from the server
             // clock (never user input), so inlining them in SUM() is safe.
             const perServiceRows = await models.Post.findAll( {
@@ -1041,6 +1043,7 @@ server.get(
                     [ models.sequelize.literal( `SUM( timestamp >= ${ since24h } )` ), 'last24h' ],
                     [ models.sequelize.literal( `SUM( timestamp >= ${ since7d } )` ), 'last7d' ],
                     [ models.sequelize.literal( `SUM( timestamp >= ${ since30d } )` ), 'last30d' ],
+                    [ models.sequelize.literal( `SUM( timestamp >= ${ since90d } )` ), 'last90d' ],
                 ],
                 group: [
                     'account.service',
@@ -1063,6 +1066,7 @@ server.get(
                             '24h': Number( row.last24h ) || 0,
                             '30d': Number( row.last30d ) || 0,
                             '7d': Number( row.last7d ) || 0,
+                            '90d': Number( row.last90d ) || 0,
                             all: Number( row.total ) || 0,
                         },
                         service: row[ 'account.service' ],
@@ -1088,6 +1092,7 @@ server.get(
                     [ models.sequelize.literal( `SUM( timestamp >= ${ since24h } )` ), 'last24h' ],
                     [ models.sequelize.literal( `SUM( timestamp >= ${ since7d } )` ), 'last7d' ],
                     [ models.sequelize.literal( `SUM( timestamp >= ${ since30d } )` ), 'last30d' ],
+                    [ models.sequelize.literal( `SUM( timestamp >= ${ since90d } )` ), 'last90d' ],
                 ],
                 group: [
                     'accountId',
@@ -1137,6 +1142,7 @@ server.get(
                         '24h': 0,
                         '30d': 0,
                         '7d': 0,
+                        '90d': 0,
                         all: 0,
                     };
                 }
@@ -1144,6 +1150,7 @@ server.get(
                 countByGameId[ gameId ][ '24h' ] += Number( row.last24h ) || 0;
                 countByGameId[ gameId ][ '30d' ] += Number( row.last30d ) || 0;
                 countByGameId[ gameId ][ '7d' ] += Number( row.last7d ) || 0;
+                countByGameId[ gameId ][ '90d' ] += Number( row.last90d ) || 0;
                 countByGameId[ gameId ].all += Number( row.total ) || 0;
             } );
 
