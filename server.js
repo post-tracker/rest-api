@@ -21,6 +21,7 @@ const INTERNAL_SERVER_ERROR_STATUS_CODE = 500;
 const MALFORMED_REQUEST_STATUS_CODE = 400;
 const FORBIDDEN_STATUS_CODE = 403;
 const NOT_FOUND_STATUS_CODE = 404;
+const SERVICE_UNAVAILABLE_STATUS_CODE = 503;
 const TOKEN_REFRESH_INTERVAL = 60 * 1000;
 const TOKEN_LENGTH = 24;
 const EXISTING_RESOURCE_STATUS_CODE = 409;
@@ -328,7 +329,10 @@ const getAllAccounts = async () => {
             allAccounts = newAccounts;
         } )
         .catch( ( findError ) => {
-            throw findError;
+            // Background refresh (startup + 60s interval). A transient DB pool
+            // timeout here must not reject (it would become an unhandled
+            // rejection); just log and keep the previously cached accounts.
+            console.error( `[warn] getAllAccounts refresh failed, keeping cached accounts: ${ findError.message }` );
         } );
 };
 
@@ -597,7 +601,14 @@ server.get(
                 }
             } )
             .catch( ( findError ) => {
-                throw findError;
+                // Don't rethrow: that hangs the request (no response) and logs a
+                // misleading [fatal]. A DB pool-acquire timeout is transient, so
+                // answer 503 and let the client retry.
+                console.error( `[warn] posts query failed: ${ findError.message }` );
+                response.status( SERVICE_UNAVAILABLE_STATUS_CODE );
+                response.json( {
+                    error: 'Temporarily unable to load posts, please retry.',
+                } );
             } );
     }
 );
@@ -694,7 +705,13 @@ server.get(
                 }
             } )
             .catch( ( findError ) => {
-                throw findError;
+                // Transient DB pool-acquire timeout: answer 503 rather than
+                // rethrowing (which would hang the request and log [fatal]).
+                console.error( `[warn] single post query failed: ${ findError.message }` );
+                response.status( SERVICE_UNAVAILABLE_STATUS_CODE );
+                response.json( {
+                    error: 'Temporarily unable to load post, please retry.',
+                } );
             } );
     }
 );
@@ -1735,7 +1752,10 @@ server.head(
                 }
             } )
             .catch( ( findError ) => {
-                throw findError;
+                // HEAD: transient DB pool-acquire timeout -> 503, no body.
+                console.error( `[warn] single post HEAD query failed: ${ findError.message }` );
+                response.status( SERVICE_UNAVAILABLE_STATUS_CODE );
+                response.end();
             } );
     }
 );
