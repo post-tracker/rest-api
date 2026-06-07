@@ -4,4 +4,6 @@ ubuntu-xenial-16.04-cloudimg-console.log
 node_modules/
 .env
 .env.local
+# Any other env files (prod.env, test.env, etc.) — they hold real secrets
+*.env
 tokens.json
