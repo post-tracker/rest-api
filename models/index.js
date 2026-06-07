@@ -146,16 +146,32 @@ models.Post = sequelize.define(
     {
         charset: 'utf8mb4',
         collate: 'utf8mb4_general_ci',
-        // The /stats endpoint range-scans posts by timestamp (rolling windows
-        // and posts-over-time). Schema is managed manually (no sequelize.sync),
-        // so this index must also be applied via SQL:
+        // Schema is managed manually (no sequelize.sync), so these indexes are
+        // documentation of what MUST exist in the DB and must be applied by SQL:
         //   ALTER TABLE posts ADD INDEX posts_timestamp (timestamp);
+        //   ALTER TABLE posts ADD INDEX accountId_2 (accountId, timestamp);
+        //
+        // - posts_timestamp: the /stats endpoint range-scans posts by timestamp
+        //   (rolling windows, posts-over-time).
+        // - accountId_2: the /:game/posts browse + search query filters
+        //   `accountId IN (<this game's accounts>)` and orders by timestamp.
+        //   The composite lets MySQL range over just this game's posts and
+        //   filesort them, instead of walking the global timestamp index and
+        //   post-filtering (which scans most of the table for quiet games — see
+        //   the `timestamp + 0` ordering in server.js that forces this plan).
         indexes: [
             {
                 fields: [
                     'timestamp',
                 ],
                 name: 'posts_timestamp',
+            },
+            {
+                fields: [
+                    'accountId',
+                    'timestamp',
+                ],
+                name: 'accountId_2',
             },
         ],
     }

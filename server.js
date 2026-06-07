@@ -416,13 +416,23 @@ server.get(
             ],
             where: {},
             limit: DEFAULT_POST_LIMIT,
+            // Order by `timestamp + 0`, not `timestamp`. A plain
+            // `ORDER BY timestamp DESC ... LIMIT` lets MySQL walk the
+            // single-column posts_timestamp index backward and post-filter
+            // `accountId IN (...)`, betting it hits the LIMIT quickly. For a
+            // game whose posts aren't near the top of the global timeline
+            // (quiet/older games) that bet is catastrophic — it scans most of
+            // the table (csgo: 973k rows / ~147s measured). The `+ 0` denies
+            // that index for ordering, so MySQL instead ranges over accountId_2
+            // (this game's posts only) and filesorts the bounded set — csgo
+            // drops to ~140ms, and tiny games can no longer full-scan. Search
+            // (below) needs the same trick for its own reasons.
             order: [
                 [
-                    'timestamp',
+                    models.sequelize.literal( 'timestamp + 0' ),
                     'DESC',
                 ],
             ],
-            logging: console.log,
         };
 
         response.cache( 'public', {
@@ -449,21 +459,12 @@ server.get(
                 }
             );
 
-            // A leading-wildcard LIKE can't use an index, so with a plain
-            // `ORDER BY timestamp DESC ... LIMIT` the optimizer walks the
-            // timestamp index newest-first and content-scans the whole posts
-            // table until it collects enough matches — minutes when the term
-            // is rare. Ordering by `timestamp + 0` keeps the same sort but
-            // denies the timestamp index for ordering, so MySQL instead ranges
-            // over the accountId index (this game's posts only) and filesorts
-            // that bounded set. No effect on the no-search browse path below,
-            // which still gets the fast indexed timestamp scan.
-            query.order = [
-                [
-                    models.sequelize.literal( 'timestamp + 0' ),
-                    'DESC',
-                ],
-            ];
+            // Ordering already uses `timestamp + 0` (set on the base query
+            // above). That's also what a rare-term search needs: a
+            // leading-wildcard LIKE can't use an index, and ordering by the bare
+            // `timestamp` would make MySQL content-scan the whole table
+            // newest-first until it collects enough matches. Ranging over this
+            // game's accounts and filesorting that bounded set is far cheaper.
         }
 
         if ( request.query.services ) {
