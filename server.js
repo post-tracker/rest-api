@@ -444,6 +444,22 @@ server.get(
                     ],
                 }
             );
+
+            // A leading-wildcard LIKE can't use an index, so with a plain
+            // `ORDER BY timestamp DESC ... LIMIT` the optimizer walks the
+            // timestamp index newest-first and content-scans the whole posts
+            // table until it collects enough matches — minutes when the term
+            // is rare. Ordering by `timestamp + 0` keeps the same sort but
+            // denies the timestamp index for ordering, so MySQL instead ranges
+            // over the accountId index (this game's posts only) and filesorts
+            // that bounded set. No effect on the no-search browse path below,
+            // which still gets the fast indexed timestamp scan.
+            query.order = [
+                [
+                    models.sequelize.literal( 'timestamp + 0' ),
+                    'DESC',
+                ],
+            ];
         }
 
         if ( request.query.services ) {
