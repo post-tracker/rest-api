@@ -13,12 +13,12 @@
   "license": "ISC",
   "dependencies": {
     "alphanum-sort": "^1.0.2",
-    "dotenv": "^16.0.1",
-    "hashids": "^1.1.4",
+    "dotenv": "^17.4.2",
+    "hashids": "^2.3.0",
     "lru-cache": "^11.5.1",
     "mysql2": "^3.22.4",
-    "nodemon": "^2.0.18",
-    "passport": "^0.6.0",
+    "nodemon": "^3.1.14",
+    "passport": "^0.7.0",
     "passport-http-bearer": "^1.0.1",
     "restify": "^11.1.0",
     "restify-cors-middleware2": "^2.2.1",
@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "eslint": "^8.19.0",
-    "eslint-config-kokarn": "^5.0.6"
+    "eslint-config-kokarn": "^6.0.2"
   },
   "engines": {
     "node": "^18.3.0"

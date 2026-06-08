@@ -1,11 +1,11 @@
-require('dotenv').config();
+require('dotenv').config( { quiet: true } );
 
 const crypto = require( 'crypto' );
 const sha1 = require( 'sha1' );
 const restify = require( 'restify' );
 const passport = require( 'passport' );
 const alphanumSort = require( 'alphanum-sort' );
-const Hashids = require( 'hashids' );
+const Hashids = require( 'hashids/cjs' );
 const Strategy = require( 'passport-http-bearer' ).Strategy;
 const corsMiddleware = require( 'restify-cors-middleware2' );
 const { Op } = require('sequelize');
