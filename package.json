@@ -20,8 +20,8 @@
     "nodemon": "^2.0.18",
     "passport": "^0.6.0",
     "passport-http-bearer": "^1.0.1",
-    "restify": "^6.3.4",
-    "restify-cors-middleware": "^1.1.0",
+    "restify": "^11.1.0",
+    "restify-cors-middleware2": "^2.2.1",
     "sequelize": "^6.37.8",
     "sha1": "^1.1.1"
   },

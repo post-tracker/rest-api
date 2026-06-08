@@ -7,7 +7,7 @@ const passport = require( 'passport' );
 const alphanumSort = require( 'alphanum-sort' );
 const Hashids = require( 'hashids' );
 const Strategy = require( 'passport-http-bearer' ).Strategy;
-const corsMiddleware = require( 'restify-cors-middleware' );
+const corsMiddleware = require( 'restify-cors-middleware2' );
 const { Op } = require('sequelize');
 const { LRUCache } = require( 'lru-cache' );
 
@@ -350,7 +350,11 @@ const serveStatic = restify.plugins.serveStatic( {
     directory: './static',
 } );
 
-server.get( /\/.*\..+?/, ( request, response, next ) => {
+// restify's find-my-way router (v7+) dropped RegExp route paths, so this
+// static-file catch-all is now a '/*' wildcard. find-my-way gives wildcards
+// the lowest match precedence, so the API/:param routes still win and only
+// otherwise-unmatched paths (asset requests) fall through to serveStatic.
+server.get( '/*', ( request, response, next ) => {
     try {
         decodeURIComponent( request.path() );
     } catch ( decodeError ) {
@@ -363,25 +367,25 @@ server.get( /\/.*\..+?/, ( request, response, next ) => {
     return serveStatic( request, response, next );
 } );
 
-server.get( '/', ( request, response ) => {
+server.get( '/', ( request, response, next ) => {
     response.json( 'Wanna do cool stuff? Msg me wherever /u/Kokarn kokarn@gmail @oskarrisberg' );
 } );
 
-server.get( '/health', ( request, response ) => {
+server.get( '/health', ( request, response, next ) => {
     response.json( { status: 'ok' } );
 } );
 
-server.get( '/loaderio-7fa45b57bc0a2a51cd5159425752f4f2/', ( request, response ) => {
+server.get( '/loaderio-7fa45b57bc0a2a51cd5159425752f4f2/', ( request, response, next ) => {
     response.sendRaw( 'loaderio-7fa45b57bc0a2a51cd5159425752f4f2' );
 } );
 
-server.head( '/:game/posts', ( request, response ) => {
+server.head( '/:game/posts', ( request, response, next ) => {
     // Should add game checking
     response.status( SUCCESS_STATUS_CODE );
     response.end();
 } );
 
-server.head( '/', ( request, response ) => {
+server.head( '/', ( request, response, next ) => {
     response.status( SUCCESS_STATUS_CODE );
     response.end();
 } );
@@ -519,7 +523,11 @@ server.get(
             }
         );
 
-        models.Post.findAll( query )
+        // Return the promise so restify awaits it. This handler is async, and
+        // restify finalizes the response when the async function resolves — an
+        // un-returned chain resolves immediately, so restify would send first
+        // and the later .then() would hit ERR_HTTP_HEADERS_SENT.
+        return models.Post.findAll( query )
             .then( ( postInstances ) => {
                 const postIdList = [];
 
@@ -613,7 +621,7 @@ server.get(
 
 server.get(
     '/:game/posts/:id',
-    ( request, response ) => {
+    ( request, response, next ) => {
         const query = {
             attributes: [
                 'content',
@@ -716,7 +724,7 @@ server.get(
 
 server.get(
     '/games',
-    ( request, response ) => {
+    ( request, response, next ) => {
         models.Game.findAll(
             {
                 attributes: [
@@ -829,7 +837,7 @@ server.get(
 server.get(
     '/:game/developers',
     ...requireScope( 'developers:read' ),
-    ( request, response ) => {
+    ( request, response, next ) => {
         const query = {
             include: [
                 {
@@ -863,7 +871,7 @@ server.get(
 server.get(
     '/:game/hashes',
     ...requireScope( 'hashes:read' ),
-    ( request, response ) => {
+    ( request, response, next ) => {
         const query = {
             attributes: [
                 'urlHash',
@@ -915,7 +923,7 @@ server.get(
 
 server.get(
     '/:game/services',
-    ( request, response ) => {
+    ( request, response, next ) => {
         const query = {
             attributes: [],
             include: [
@@ -981,7 +989,7 @@ server.get(
 
 server.get(
     '/:game/groups',
-    ( request, response ) => {
+    ( request, response, next ) => {
         const query = {
             attributes: [
                 'group',
@@ -1260,7 +1268,7 @@ server.get(
 server.post(
     '/:game/posts',
     ...requireScope( 'posts:write' ),
-    ( request, response ) => {
+    ( request, response, next ) => {
         models.Post.findOrCreate(
             {
                 defaults: {
@@ -1317,7 +1325,7 @@ server.post(
 server.post(
     '/:game/accounts',
     ...requireScope( 'accounts:write' ),
-    ( request, response ) => {
+    ( request, response, next ) => {
         // console.log( request.body );
         models.Account.findOrCreate(
             {
@@ -1360,7 +1368,7 @@ server.post(
 server.post(
     '/:game/developers',
     ...requireScope( 'developers:write' ),
-    ( request, response ) => {
+    ( request, response, next ) => {
         models.Developer.findOrCreate(
             {
                 defaults: {
@@ -1406,7 +1414,7 @@ server.post(
 server.post(
     '/games',
     ...requireScope( 'games:write' ),
-    ( request, response ) => {
+    ( request, response, next ) => {
         models.Game.findOrCreate(
             {
                 defaults: {
@@ -1450,7 +1458,7 @@ server.post(
 server.patch(
     '/games/:identifier',
     ...requireScope( 'games:write' ),
-    ( request, response ) => {
+    ( request, response, next ) => {
         models.Game.update(
             request.body.properties,
             {
@@ -1487,7 +1495,7 @@ server.patch(
 server.patch(
     '/:game/developers/:id',
     ...requireScope( 'developers:write' ),
-    ( request, response ) => {
+    ( request, response, next ) => {
         models.Developer.update(
             request.body.properties,
             {
@@ -1520,7 +1528,7 @@ server.patch(
 server.post(
     '/:game/developers/:id/merge',
     ...requireScope( 'developers:write' ),
-    ( request, response ) => {
+    ( request, response, next ) => {
         const sourceId = Number( request.params.id );
         const targetId = Number( request.body && request.body.targetId );
 
@@ -1608,7 +1616,7 @@ server.post(
 server.patch(
     '/:game/accounts/:id',
     ...requireScope( 'accounts:write' ),
-    ( request, response ) => {
+    ( request, response, next ) => {
         models.Account.update(
             request.body.properties,
             {
@@ -1641,7 +1649,7 @@ server.patch(
 server.del(
     '/:game/accounts/:id',
     ...requireScope( 'accounts:delete' ),
-    ( request, response ) => {
+    ( request, response, next ) => {
         // console.log( request.body );
         models.Account.destroy(
             {
@@ -1677,7 +1685,7 @@ server.del(
 server.del(
     '/:game/posts/:url',
     ...requireScope( 'posts:delete' ),
-    ( request, response ) => {
+    ( request, response, next ) => {
         models.Post.destroy(
             {
                 where: {
@@ -1715,7 +1723,7 @@ server.del(
 
 server.head(
     '/:game/posts/:hash',
-    ( request, response ) => {
+    ( request, response, next ) => {
         const query = {
             where: {
                 urlHash: request.params.hash,
@@ -1856,20 +1864,14 @@ server.del(
     }
 );
 
+// restify passes (req, res, err, callback) here and won't finalize/send the
+// error response until the callback is invoked — omitting it (as before)
+// leaves the socket hanging on every error (e.g. a missing static file).
 // eslint-disable-next-line max-params
-server.on( 'restifyError', ( request, response, error ) => {
-    console.log(error);
-    // switch ( error.body.code ) {
-    //     case 'ResourceNotFound':
-    //         response.status( NOT_FOUND_STATUS_CODE );
-    //         response.end();
-    //         break;
-    //     default:
-    //         console.error( `uncaughtException for ${ error }` );
-    //         response.status( INTERNAL_SERVER_ERROR_STATUS_CODE );
-    //         response.end();
-    //         break;
-    // }
+server.on( 'restifyError', ( request, response, error, callback ) => {
+    console.log( error );
+
+    return callback();
 } );
 
 process.on( 'uncaughtException', ( error ) => {
