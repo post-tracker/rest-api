@@ -13,19 +13,16 @@
   "license": "ISC",
   "dependencies": {
     "alphanum-sort": "^1.0.2",
-    "bull": "^3.3.9",
     "dotenv": "^16.0.1",
-    "got": "^7.1.0",
     "hashids": "^1.1.4",
-    "html-entities": "^1.2.1",
     "lru-cache": "^11.5.1",
-    "mysql2": "^2.3.3",
+    "mysql2": "^3.22.4",
     "nodemon": "^2.0.18",
     "passport": "^0.6.0",
     "passport-http-bearer": "^1.0.1",
     "restify": "^6.3.4",
     "restify-cors-middleware": "^1.1.0",
-    "sequelize": "^4.28.6",
+    "sequelize": "^6.37.8",
     "sha1": "^1.1.1"
   },
   "devDependencies": {

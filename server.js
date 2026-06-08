@@ -12,7 +12,6 @@ const { Op } = require('sequelize');
 const { LRUCache } = require( 'lru-cache' );
 
 const models = require( './models' );
-const processor = require( './modules/processor.js' );
 
 const LISTEN_PORT = process.env.PORT || 3000;
 const JSON_INDENTATION = 4;
@@ -235,8 +234,6 @@ server.use( restify.plugins.gzipResponse() );
 server.use( addHeader );
 server.use( accessLog );
 
-processor();
-
 // Prime the token cache and keep it fresh so newly issued / revoked tokens
 // propagate without a restart.
 loadTokens().catch( ( loadError ) => {
@@ -444,15 +441,15 @@ server.get(
                 {},
                 query.where,
                 {
-                    $or: [
+                    [ Op.or ]: [
                         {
                             content: {
-                                $like: `%${ request.query.search }%`,
+                                [ Op.like ]: `%${ request.query.search }%`,
                             },
                         },
                         // {
                         //     '$account.developer.nick$': {
-                        //         $like: `%${ request.query.search }%`,
+                        //         [ Op.like ]: `%${ request.query.search }%`,
                         //     },
                         // },
                     ],
@@ -1001,12 +998,12 @@ server.get(
             model: models.Developer,
             where: {
                 group: {
-                    $and: [
+                    [ Op.and ]: [
                         {
-                            $ne: null,
+                            [ Op.ne ]: null,
                         },
                         {
-                            $ne: '',
+                            [ Op.ne ]: '',
                         },
                     ],
                 },
