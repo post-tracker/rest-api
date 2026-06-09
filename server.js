@@ -1,5 +1,3 @@
-require('dotenv').config( { quiet: true } );
-
 const crypto = require( 'crypto' );
 const sha1 = require( 'sha1' );
 const restify = require( 'restify' );

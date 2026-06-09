@@ -4,20 +4,18 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js",
+    "start": "node --env-file-if-exists=.env server.js",
     "pretest": "eslint **/*.js",
-    "dev": "nodemon server.js"
+    "dev": "node --watch --env-file-if-exists=.env server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "alphanum-sort": "^1.0.2",
-    "dotenv": "^17.4.2",
     "hashids": "^2.3.0",
     "lru-cache": "^11.5.1",
     "mysql2": "^3.22.4",
-    "nodemon": "^3.1.14",
     "passport": "^0.7.0",
     "passport-http-bearer": "^1.0.1",
     "restify": "^11.1.0",
@@ -30,7 +28,7 @@
     "eslint-config-kokarn": "^6.0.2"
   },
   "engines": {
-    "node": "^18.3.0"
+    "node": ">=20.18.0 <23"
   },
   "eslintConfig": {
     "extends": "kokarn/nodejs"
