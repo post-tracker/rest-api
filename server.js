@@ -811,7 +811,7 @@ server.get(
 server.get(
     '/accounts',
     ...requireScope( 'accounts:read' ),
-    ( request, response ) => {
+    async ( request, response ) => {
         let accounts = allAccounts;
 
         if ( request.query.excludeService ) {
