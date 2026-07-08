@@ -802,6 +802,36 @@ server.get(
     }
 );
 
+// Every registered account across all games, as { identifier, service }.
+// The accounts table is globally unique by (identifier, service) — an account
+// tracked for one game can't be added to another (POST /:game/accounts 409s) —
+// so the finder needs the cross-game list to skip devs already registered
+// elsewhere, not just those already tracked for the game being scanned. Served
+// straight from the same in-memory cache the per-game route uses.
+server.get(
+    '/accounts',
+    ...requireScope( 'accounts:read' ),
+    ( request, response ) => {
+        let accounts = allAccounts;
+
+        if ( request.query.excludeService ) {
+            accounts = accounts.filter( ( account ) => {
+                return !request.query.excludeService.includes( account.service );
+            } );
+        }
+
+        response.json( {
+            // eslint-disable-next-line id-blacklist
+            data: accounts.map( ( account ) => {
+                return {
+                    identifier: account.identifier,
+                    service: account.service,
+                };
+            } ),
+        } );
+    }
+);
+
 server.get(
     '/:game/accounts',
     ...requireScope( 'accounts:read' ),
